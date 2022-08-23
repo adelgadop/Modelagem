@@ -1,5 +1,5 @@
 # Modelagem Atmosférica - 2o semestre 2022
-Exercicíos desenvolvidos em Python como parte dos estudos de doutorado em meteorologia
+Exercicíos desenvolvidos em Python como parte dos estudos de doutorado em meteorologia.
 
 ## Exercicío 1
 - [ ] Resolver problema de transporte de um pulso inicial de poluição numa situação em que o vento seja constante.
