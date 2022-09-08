@@ -92,10 +92,11 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
                 C[[0,-1], n] = [0,0]
             
             elif cond_front == 'periódica': # ok
+                C[-1, n] = C[ 99, n-2] - CFL*(C[100, n-1] - C[98, n-1])
                 C[ 0, n] = C[100, n-2] - CFL*(C[1, n-1] - C[-1, n-1])
                 C[ 1, n] = C[ 1, n-2] - CFL*(C[2, n-1] - C[0, n-1])
                 #C[ 2, n] = C[ 2, n-2] - CFL*(C[3, n-1] - C[1, n-1])
-                C[-1, n] = C[ 99, n-2] - CFL*(C[100, n-1] - C[98, n-1])
+                
 
             elif cond_front == 'radiacional': # ok
                 C[ 0, n] = C[ 0, n-1] - CFL*(C[ 1, n-1]- C[ 0, n-1])
@@ -105,7 +106,8 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
         elif aprox == "ordem4":
                       
             C[2:-2, n] = C[2:-2, n-1] - CFL*(4/3*(C[3:-1, n-1] - C[1:-3, n-1])/2 - 1/3*(C[4:, n-1] - C[:-4, n-1])/4) 
-            
+            # Comecar ordem n = 1 euler forward no tempo
+
             # Condição de fronteira
             # ---------------------
             if cond_front == 'fixa':
