@@ -1,41 +1,66 @@
+from __future__ import division
+from scipy.sparse.linalg import spsolve
 import numpy as np
 import matplotlib.pyplot as plt
+import imageio.v2 as imageio
+import os
 
-def sol_analytical(cond_front, fun, X, U, T, Nx):
-    
-    if cond_front == "fixa":
-        if fun == "Gaussiana":
-            sol = {nr:10*np.exp(-(X - U*T - 51*5000)**2/(nr*5000)**2) for nr in [10, 2]}
-
-        if fun == "Retângulo":
-            sol = {np.where(abs(np.linspace(-10, 10, Nx)) <= 0.5, 1, 0)*nr for nr in [10, 2]}
-
-    elif cond_front == "radiacional":
-        if fun == "Gaussiana":
-            sol = {nr:10*np.exp(-(X - U*T - 51*5000)**2/(nr*5000)**2) for nr in [10, 2]}
-
-        if fun == "Retângulo":
-            sol = {np.where(abs(np.linspace(-10, 10, Nx)) <= 0.5, 1, 0)*nr for nr in [10, 2]}
-       
-    elif cond_front == "periódica":
-        if fun == "Gaussiana":
-            sol = {nr:np.maximum(10*np.exp(-(X - U*T - 51*5000)**2/(nr*5000)**2),
-                   10*np.exp(-(X - U*T - (51-(Nx-2))*5000)**2/(nr*5000)**2)) for nr in [10, 2]}
-
-        if fun == "Retângulo":
-            pass
-
-
-    return sol
-    
-def Conc(i, nr):
+def Conc(x, nr):
     """
     Função de concentração com variação Gaussiana
     ---------------------------------------------
     i:      index
     nr:     número de pontos a partir do centro da gaussiana
     """
-    return 10*np.exp(-(i*5000 - 51*5000)**2/(nr*5000)**2)
+    return 10*np.exp(-(x - 51*5000)**2/(nr*5000)**2)
+
+def Rect(x):
+    """
+    Rectangular function
+    --------------------
+    Centered in 50, 51, 52
+    """
+    return np.where((x >= (50*5_000)) & (x <= (52*5_000)), 10, 0 )
+
+def crank_matrix(x, r, uc):
+    """
+    Return matrices A and B for advection equations
+    -----------------------------------------------
+    x      : linear space with Nx points
+    r      : CFL/2
+    uc     : is a Crank-Nicolson parameter equals to 1/2
+    """
+    from scipy.sparse import spdiags
+
+    uns   = np.ones(len(x))
+    r     = uns*r
+    diags = (-1, 0, 1)  # -1 low diagonal, 0 main diagonal, 1 upper diagonal
+    A = spdiags( [-uc*r, uns, uc*r], diags, len(x), len(x) )
+    B = spdiags( [(1-uc)*r, uns, -(1-uc)*r], diags, len(x), len(x) )
+    return A.tocsr(), B.tocsr()
+
+def sol_analytical(fun, x, U, Nx, Nt, nr, t):
+    RE = np.zeros((Nx, Nt))
+
+    if U > 0:
+        for n in range(0, Nt):
+            #RE[1:, n] = RE[1:, n-1] - 1*(RE[1:, n-1] - RE[0:-1, n-1])
+
+            if fun == "Gaussiana":
+                ab = 10*np.exp(-(x - U*t[n] - 51*5000)**2/(nr*5000)**2)
+                ba = 10*np.exp(-(x - U*t[n] - (51-(Nx-2))*5000)**2/(nr*5000)**2)
+                RE[:,n] = np.maximum(ab, ba)
+
+            elif fun == "Retângulo":
+                ab = np.where((x >= (50*5_000 + U*t[n])) & (x <= (52*5_000 + U*t[n])), 10, 0 )
+                ba = np.where((x >= (-50*5_000 + U*t[n])) & (x <= (-48*5_000 + U*t[n])), 10, 0 )
+                RE[:,n] = np.maximum(ab,ba)
+           
+            #RE[0, n] = RE[-1, n-1]
+    else:
+        print("precisa de codigo")
+   
+    return RE
     
 def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
     """
@@ -49,15 +74,19 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
     # Time: the last in Nt-1 (e.g., not use n+1)
     u = np.zeros((Nx, Nt))
 
+    r = CFL/2
+    A, B = crank_matrix(x, r, 0.5)  # 0.5 because 1 + n/2
+
     # Condições iniciais
     # -------------------
     if fun == "Gaussiana":
-        C[:,0] = Conc(x/dx, nr)
-        u[:,0] = Conc(x/dx, nr)
+        C[:,0] = Conc(x, nr)
+        u[:,0] = Conc(x, nr)
 
     elif fun == "Retângulo":
-        C[[int(51 - 2/2), 51, int(51 + 2/2)], 0] = 1/2*nr
-            
+        C[:,0] = Rect(x)
+        u[:,0] = Rect(x)
+        
     for n in range(1, Nt): 
         # Aproximação numérica:
         # ---------------------
@@ -80,8 +109,8 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
         elif aprox == "leapfrog":  # ok
 
             if n ==1:
-            # Euler-forward scheme for the first time step (chapter 4.2, Doos 2020)
-                C[1:-1,n] = C[1:-1,n-1] - CFL*(C[2:Nx,n-1] - C[1:-1,n-1])   # rev ok
+            # Euler 2d order scheme for the first time step
+                C[1:-1,n] = C[1:-1,n-1] - CFL/2*(C[2:,n-1] - C[:-2,n-1])   # rev ok
 
             elif n > 1:
                 C[1:-1, n] = C[1:-1, n - 2] - CFL*(C[2:Nx, n-1] - C[0:-2, n-1])   # rev ok
@@ -104,20 +133,23 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
        
        # -------------------------------------------------
         elif aprox == "ordem4":
-                      
-            C[2:-2, n] = C[2:-2, n-1] - CFL*(4/3*(C[3:-1, n-1] - C[1:-3, n-1])/2 - 1/3*(C[4:, n-1] - C[:-4, n-1])/4) 
-            # Comecar ordem n = 1 euler forward no tempo
+            if n == 1:
+                # Comecar ordem 2 (Euler) em n = 1 
+                C[1:-1, n] = C[1:-1, n-1] - CFL/2*(C[2:, n-1] - C[:-2, n-1])
 
+            else:
+                C[2:-2, n] = C[2:-2, n-1] - CFL*(4/3*(C[3:-1, n-1] - C[1:-3, n-1])/2 - 1/3*(C[4:, n-1] - C[:-4, n-1])/4) 
+            
             # Condição de fronteira
             # ---------------------
             if cond_front == 'fixa':
                 C[[0,-1], n] = [0,0]
             
             elif cond_front == 'periódica': # rev ok
-                C[ 2, n] = C[  2, n-1] - CFL*(4/3*(C[  3, n-1] - C[  1, n-1])/2 - 1/3*(C[4, n-1] - C[ 0, n-1])/4)
-                C[ 1, n] = C[  1, n-1] - CFL*(4/3*(C[  2, n-1] - C[  0, n-1])/2 - 1/3*(C[3, n-1] - C[100, n])/4)
-                C[ 0, n] = C[100, n-1] - CFL*(4/3*(C[  1, n-1] - C[ -1, n-1])/2 - 1/3*(C[2, n-1] - C[98, n-1])/4)
-                C[-1, n] = C[ 99, n-1] - CFL*(4/3*(C[100, n-1] - C[ 98, n-1])/2 - 1/3*(C[1, n-1] - C[97, n-1])/4) 
+                C[ 2, n] = C[  2, n-1] - CFL*(4/3*(C[  3, n-1] - C[  1, n-1])/2 - 1/3*(C[  4, n-1] - C[  0, n-1])/4)
+                C[ 1, n] = C[  1, n-1] - CFL*(4/3*(C[  2, n-1] - C[  0, n-1])/2 - 1/3*(C[  3, n-1] - C[100, n  ])/4)
+                C[ 0, n] = C[100, n-1] - CFL*(4/3*(C[  1, n-1] - C[ -1, n-1])/2 - 1/3*(C[  2, n-1] - C[ 98, n-1])/4)
+                C[-1, n] = C[ 99, n-1] - CFL*(4/3*(C[100, n-1] - C[ 98, n-1])/2 - 1/3*(C[  1, n-1] - C[ 97, n-1])/4) 
                 C[-2, n] = C[ 98, n-1] - CFL*(4/3*(C[ 99, n-1] - C[ 97, n-1])/2 - 1/3*(C[100, n-1] - C[ 96, n-1])/4)
 
             elif cond_front == 'radiacional':
@@ -125,61 +157,74 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
                 C[-1, n] = C[-1, n-1] - CFL*(C[-1, n-1]- C[-2, n-1])
 
         # -------------------------------------------------       
-        elif aprox == "Matsuno": # somente periódica 
-
-            u[1:-1,n] = C[1:-1, n-1] - CFL*(C[1:-1, n-1]- C[:-2, n-1])
-            C[1:-1,n] = C[1:-1, n-1] - CFL*(u[1:-1, n-1] - u[:-2,n-1])
+        elif aprox == "Matsuno": # somente periódica
+            # Start with Euler forward
+            u[1:-1,n] = C[1:-1, n-1] - CFL*(C[1:-1, n-1] - C[0:-2, n-1])
+            C[1:-1,n] = C[1:-1, n-1] - CFL*(u[1:-1, n-1] - u[0:-2, n-1])
 
             if cond_front == 'periódica':
-               u[0, n] = C[-1, n-1] - CFL*(C[-1, n-1]- C[-2, n-1])
-               C[0,n] = C[0, n-1] - CFL*(u[-1, n-1] - u[-2,n-1])
-               u[-1, n] = C[-1, n-1] - CFL*(C[-1, n-1]- C[-2, n-1])
-               C[-1,n] = C[-1, n-1] - CFL*(u[-1, n-1] - u[-2,n-1])
- 
+                u[-1, n] = C[-1, n-1] - CFL*(C[-1, n-1]- C[-2, n-1])
+                C[-1, n] = C[-1, n-1] - CFL*(u[-1, n-1] - u[-2,n-1])
+                u[0, n] = u[-1, n-1] #- CFL*(C[-1, n-1]- C[-2, n-1])
+                C[0, n] = C[-1, n-1] #- CFL*(u[-1, n-1] - u[-2,n-1])
 
+        elif aprox == "Crank":
+            # spsolve: solve the sparse linear system Ax=B
+            # A*C[:,n] = B*C[:, n-1]  
+            C[:, n] = spsolve(A, B*C[:, n-1])
+            
+            if cond_front == 'periódica':
+                C[0, n] = C[-1, n-1]  # acho que aqui não estou certo, ne?
+             
+ 
     return C
     
-def plot_sol_num(fun, aprox, cond_front, ylabel, dP, hora, Nx, Nt, CFL, U, x, dx, t, dt):
-    if fun == "Retângulo":
-        fig, ax = plt.subplots(1,1, figsize=(8, 5))
-        nr = 10
-        C = sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t)
+def plot_sol_num(C, fun, aprox, cond_front, ylabel, dP, hora, Nt, CFL, U, dx, dt):
 
-        ax.plot(C[:,0], color = 'b', lw=3, label="Condição inicial")
+    fig, ax = plt.subplots(1,1, figsize=(8, 5))
 
-        for n in range(1, Nt):  
-            if n % dP == 0:
-                ax.plot(C[:,n], color='m', linestyle='dashed', label=f"PT {n}")
+    ax.plot(C[:,0], color = 'b', lw=3, label="Condição inicial")
 
-        ax.plot(C[:,-1], color='g', lw=3, label = f"Final {hora} horas ")
+    for n in range(1, Nt):  
+        if n % dP == 0:
+            ax.plot(C[:,n], color='m', linestyle='dashed', label=f"PT {n}")
+
+    ax.plot(C[:,-1], color='g', lw=3, label = f"Final {hora} horas ")
+    ax.set_ylabel(ylabel)
+    ax.set_title(f"$\Delta$t = {dt.round(0)} segundos, $\Delta$x = {dx} metros, CFL = {CFL.round(2)}.",loc='left')
+    ax.legend(fontsize=8, ncol=2)
+    ax.set_xlabel("Pontos da grade")
+    ax.text(2,3, r"$\vec U$ = "+ f"{U} m/s.", fontsize=12)
+    ax.text(2,4, f"CFL = {CFL.round(2)}", fontsize=12)
+    fig.savefig("fig/" + aprox + "_" + fun[:3] + "_" + cond_front[:3] +"_" + str(hora) +".png", 
+                dpi = 300, bbox_inches='tight', facecolor='w')
+
+def fig2gif(Nt, dP, dt, CFL, C_ref, c, ylabel, aprox, nr, cond_front, fun):
+    # Fazemos gifs
+    filenames = []
+    for n in range(0,int(Nt),dP):
+        # plot the line chart
+        fig, ax = plt.subplots(figsize=[8,6])
+        ax.set_title(f"Hora: {(n*dt/3600).round(2)}, CFL = {CFL.round(2)}, " + r"$\Delta$t"+ f"= {dt.round(2)}")
+        ax.plot(C_ref[:,n], color = "b", label="Sol. Analítica")
+        ax.plot(c[:,n], color = 'r', linestyle = 'dashed', label= aprox+f' nr: {nr}')
+        ax.set_ylim(-4,15)
+        ax.legend()
         ax.set_ylabel(ylabel)
-        ax.set_title("Concentração"+f" para $\Delta$t = {dt.round(0)} segundos, $\Delta$x = {dx} metros, CFL = {CFL}.",loc='left')
-        ax.legend(fontsize=8, ncol=2)
-        ax.set_xlabel("Pontos da grade")
-        ax.text(2,3, r"$\vec U$ = "+ f"{U} m/s.", fontsize=12)
-        ax.text(2,4, f"CFL = {CFL.round(2)}", fontsize=12)
-        fig.savefig("fig/" + aprox + "_" + fun[:3] + "_" + cond_front[:3] +"_" + str(hora) +".png", 
-                    dpi = 300, bbox_inches='tight', facecolor='w')
-
-    elif fun == "Gaussiana":
-        fig, ax = plt.subplots(2,1, figsize=(10, 8))
         
-        for j, nr in enumerate([10, 2]):
+        # create file name and append it to a list
+        filename = f'fig/gifs/{n}.png'
+        filenames.append(filename)
+        
+        # save frame
+        fig.savefig(filename, dpi=300)
+        plt.close() # build gif
+        
+    with imageio.get_writer('gifs/'+fun[:3]+'_' + aprox+'_'+ cond_front[:3] +'.gif', mode='I', duration = 1) as writer:
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
             
-            C = sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t)
-            ax[j].plot(C[:,0], color = 'b', lw=3, label="Condição inicial")
-
-            for n in range(1, Nt):  
-                if n % dP == 0:
-                    ax[j].plot(C[:,n], color='m', linestyle='dashed', label=f"PT {n}")
-
-            ax[j].plot(C[:,-1], color='g', lw=3, label = f"Final {hora} horas ")
-            ax[j].set_ylabel(ylabel)
-            ax[j].set_title("Concentração"+f" para $\Delta$t = {dt.round(0)} segundos, $\Delta$x = {dx} metros, CFL = {CFL.round(2)} e nr = {nr}.",loc='left')
-            ax[0].legend(fontsize=8, ncol=2)
-            ax[1].set_xlabel("Pontos da grade")
-            ax[1].text(2,3, r"$\vec U$ = "+ f"{U} m/s.", fontsize=12)
-            ax[1].text(2,4, f"CFL = {CFL.round(2)}", fontsize=12)
-            
-        fig.savefig("fig/" + aprox + "_" + fun[:3] + "_" + cond_front[:3] +"_" + str(hora) +".png", 
-                    dpi = 300, bbox_inches='tight', facecolor='w')
+    # Remove files
+    for filename in set(filenames):
+        os.remove(filename)
