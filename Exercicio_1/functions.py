@@ -47,8 +47,8 @@ def sol_analytical(fun, x, U, Nx, Nt, nr, t):
             #RE[1:, n] = RE[1:, n-1] - 1*(RE[1:, n-1] - RE[0:-1, n-1])
 
             if fun == "Gaussiana":
-                ab = 10*np.exp(-(x - U*t[n] - 51*5000)**2/(nr*5000)**2)
-                ba = 10*np.exp(-(x - U*t[n] - (51-(Nx-2))*5000)**2/(nr*5000)**2)
+                ab = 10*np.exp(-(x - U*t[n] - (Nx-50)*5000)**2/(nr*5000)**2)
+                ba = 10*np.exp(-(x - U*t[n] + (Nx-51)*5000)**2/(nr*5000)**2)
                 RE[:,n] = np.maximum(ab, ba)
 
             elif fun == "Retângulo":
@@ -72,7 +72,8 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
     C = np.zeros((Nx, Nt))   # Matriz
     # Space: the last is Nx-1 (e.g., not use Nx)
     # Time: the last in Nt-1 (e.g., not use n+1)
-    u = np.zeros((Nx, Nt))
+    u   = C.copy()
+    k1  = u.copy()
 
     r = CFL/2
     A, B = crank_matrix(x, r, 0.5)  # 0.5 because 1 + n/2
@@ -174,9 +175,36 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
             C[:, n] = spsolve(A, B*C[:, n-1])
             
             if cond_front == 'periódica':
-                C[0, n] = C[-1, n-1]  # acho que aqui não estou certo, ne?
+                C[-1, n] = C[-1, n-1] - CFL/4*(C[0, n] - C[-2, n] + C[0, n-1] - C[-2, n-1])
+                C[0, n] = C[-1, n-1]
+
+        elif aprox == "RK4":
+            """
+            Runge-Kutta scheme
+            ------------------
+            k1      : C*^(n+1/2)
+            k2      : C^(n+1/2)
+            k3      : C*^(n+1)
+            """
+            k1[1:-1,n] = C[1:-1, n-1] - CFL/2*(C[1:-1, n-1] - C[:-2, n-1])
+            k2 = k1.copy()
+            k2[1:-1,n] = C[1:-1, n-1] - CFL/2*(k1[1:-1, n-1] - k1[:-2, n-1])
+            k3 = k2.copy()
+            k3[1:-1,n] = C[1:-1, n-1] - CFL*(k2[1:-1, n-1] - k2[:-2, n-1])
+            C[1:-1, n] = C[1:-1, n-1] - CFL/6*(C[1:-1, n-1] - C[:-2, n-1] + 2*(k1[1:-1, n-1] - k1[:-2, n-1]) +2*(k2[1:-1, n-1] - k2[:-2, n-1]) + k3[1:-1, n-1] - k3[:-2, n-1])
+
+            if cond_front == 'periódica':
+                k1[-1,n] = C[-1, n-1] - CFL/2*(C[-1, n-1] - C[-2, n-1])
+                k2[-1,n] = C[-1, n-1] - CFL/2*(k1[-1, n-1] - k1[-2, n-1])
+                k3[-1,n] = C[-1, n-1] - CFL*(k2[-1, n-1] - k2[-2, n-1])
+                C[-1, n] = C[-1, n-1] - CFL/6*(C[-1, n-1] - C[-2, n-1] + 2*(k1[-1, n-1] - k1[-2, n-1]) +2*(k2[-1, n-1] - k2[-2, n-1]) + k3[-1, n-1] - k3[-2, n-1])
+                
+                k1[0,n] = k1[-1,n-1]
+                k2[0,n] = k2[-1,n-1]
+                k3[0,n] = k3[-1,n-1]
+                C[0, n] = C[-1, n-1] 
+                
              
- 
     return C
     
 def plot_sol_num(C, fun, aprox, cond_front, ylabel, dP, hora, Nt, CFL, U, dx, dt):
