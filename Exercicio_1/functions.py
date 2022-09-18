@@ -22,7 +22,7 @@ def Rect(x):
     """
     return np.where((x >= (50*5_000)) & (x <= (52*5_000)), 10, 0 )
 
-def crank_matrix(x, r, uc):
+def crank_matrix(x, CFL, uc):
     """
     Return matrices A and B for advection equations
     -----------------------------------------------
@@ -30,39 +30,72 @@ def crank_matrix(x, r, uc):
     r      : CFL/2
     uc     : is a Crank-Nicolson parameter equals to 1/2
     """
-    from scipy.sparse import spdiags
-
+    import scipy.sparse as sp
     uns   = np.ones(len(x))
-    r     = uns*r
+    r     = uns*CFL/2
     diags = (-1, 0, 1)  # -1 low diagonal, 0 main diagonal, 1 upper diagonal
-    A = spdiags( [-uc*r, uns, uc*r], diags, len(x), len(x) )
-    B = spdiags( [(1-uc)*r, uns, -(1-uc)*r], diags, len(x), len(x) )
-    return A.tocsr(), B.tocsr()
+    A = sp.spdiags( [-uc*r, uns, uc*r], diags, len(x), len(x) )
+    A = sp.lil_matrix(A)
+    B = sp.spdiags( [(1-uc)*r, uns, -(1-uc)*r], diags, len(x), len(x) )
+    B = sp.lil_matrix(B)
+    
+    # periodic
+    A[0,-1] = -CFL/4
+    A[-1,0] = CFL/4
+    B[0,-1] = CFL/4
+    B[-1,0] = -CFL/4
+    return A.tocsr(), B.tocsr()  # A.toarray()
 
-def sol_analytical(fun, x, U, Nx, Nt, nr, t):
-    RE = np.zeros((Nx, Nt))
+def deriv(c,U,dx):
+    """
+    Derivada RK4  Rev: ok
+    """
+    dc = np.zeros(len(c))
+    p = U/(2*dx)
+    dc[2:-2] = -(U/(12*dx))*(8*(c[3:-1]-c[1:-3]) - (c[4:] - c[:-4]))
+    dc[1]  = -p*(c[2] - c[-1])
+    dc[-2] = -p*(c[-1]- c[-3])
+    dc[0]  = -p*(c[1] - c[-2])
+    dc[-1] = -p*(c[1] - c[-2])
+    return dc
+
+def sol_analytical(fun, x, U, Nx, Nt, nr, dt, t):
+    RE = np.zeros((Nx, Nt))   # Matriz
+    # Space: the last is Nx-1 (e.g., not use Nx)
+    # Time: the last in Nt-1 (e.g., not use n+1)
+
+    # Condições iniciais
+    # -------------------
+    if fun == "Gaussiana":
+        RE[:,0] = Conc(x, nr)
+
+    elif fun == "Retângulo":
+        RE[:,0] = Rect(x)
 
     if U > 0:
-        for n in range(0, Nt):
-            #RE[1:, n] = RE[1:, n-1] - 1*(RE[1:, n-1] - RE[0:-1, n-1])
+        for n in range(1, Nt):
+            if dt == 500:
+                RE[1:, n] = RE[:-1, n-1]  # sol analitica U*dt/dx = 1
+                RE[0 , n] = RE[ -1, n-1]
+            else:
+                if fun == "Gaussiana":
+                    ab = 10*np.exp(-(x - U*t[n] - (Nx-50)*5000)**2/(nr*5000)**2)
+                    ba = 10*np.exp(-(x - U*t[n] + (Nx-51)*5000)**2/(nr*5000)**2)
+                    RE[:,n] = np.maximum(ab, ba)
+                    #RE[0, n] = RE[-1, n-1]
 
-            if fun == "Gaussiana":
-                ab = 10*np.exp(-(x - U*t[n] - (Nx-50)*5000)**2/(nr*5000)**2)
-                ba = 10*np.exp(-(x - U*t[n] + (Nx-51)*5000)**2/(nr*5000)**2)
-                RE[:,n] = np.maximum(ab, ba)
-
-            elif fun == "Retângulo":
-                ab = np.where((x >= (50*5_000 + U*t[n])) & (x <= (52*5_000 + U*t[n])), 10, 0 )
-                ba = np.where((x >= (-50*5_000 + U*t[n])) & (x <= (-48*5_000 + U*t[n])), 10, 0 )
-                RE[:,n] = np.maximum(ab,ba)
-           
-            #RE[0, n] = RE[-1, n-1]
+                elif fun == "Retângulo":
+                    ab = np.where((x >= (50*5_000 + U*t[n])) & (x <= (52*5_000 + U*t[n])), 10, 0 )
+                    ba = np.where((x >= (-50*5_000 + U*t[n])) & (x <= (-48*5_000 + U*t[n])), 10, 0 )
+                    RE[:,n] = np.maximum(ab,ba)
+                    #RE[0, n] = RE[-1, n-1]
+                
     else:
         print("precisa de codigo")
    
     return RE
     
-def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
+def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t, dt):
     """
     aprox       : Tipo de aproximação: "ordem1", "leapfrog", "ordem4", "Matsuno", "implicito", "RK4" (Runge Kutta 4).
     cond_front  : Condição de fronteira, tipo "fixa", "periódica" e "radiacional".
@@ -72,49 +105,48 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
     C = np.zeros((Nx, Nt))   # Matriz
     # Space: the last is Nx-1 (e.g., not use Nx)
     # Time: the last in Nt-1 (e.g., not use n+1)
-    u   = C.copy()
-    k1  = u.copy()
-
-    r = CFL/2
-    A, B = crank_matrix(x, r, 0.5)  # 0.5 because 1 + n/2
+    u  = C.copy()
+    
+    A, B = crank_matrix(x, CFL, 0.5)  # 0.5 because 1 + n/2
 
     # Condições iniciais
     # -------------------
     if fun == "Gaussiana":
         C[:,0] = Conc(x, nr)
         u[:,0] = Conc(x, nr)
+        c = C[:,0].copy()
 
     elif fun == "Retângulo":
         C[:,0] = Rect(x)
         u[:,0] = Rect(x)
+        c = C[:,0].copy()
         
-    for n in range(1, Nt): 
+    for n in range(1, Nt):
+
         # Aproximação numérica:
         # ---------------------
         if aprox == "ordem1": # ok
+            C[1:, n] = C[1:, n-1] - CFL*(C[1:, n-1]- C[:-1, n-1])
 
             # Condição de fronteira
             # ---------------------
             if cond_front == 'fixa':
-                C[1:Nx, n] = C[1:Nx, n-1] - CFL*(C[1:Nx, n-1]- C[0:Nx-1, n-1]) 
                 C[[0,-1], n] = [0,0]
 
             elif cond_front == 'periódica':
-                C[1:Nx, n] = C[1:Nx, n-1] - CFL*(C[1:Nx, n-1]- C[0:Nx-1, n-1]) 
-                C[[0,1], n] = C[[Nx-2,Nx-1], n-1] - CFL*(C[[Nx-2,Nx-1], n-1]- C[[Nx-3,Nx-2], n-1]) 
+                C[0, n]  = C[-1, n-1]
                 
             elif cond_front == 'radiacional':
-                C[1:Nx, n] = C[ 1:Nx, n-1] - CFL*(C[1:Nx, n-1]- C[0:Nx-1, n-1])
+                C[0, n] = C[ -1, n-1] - CFL*(C[-1, n-1]- C[-2, n-1])
 
         # -------------------------------------------------
         elif aprox == "leapfrog":  # ok
-
-            if n ==1:
+            if n == 1:
             # Euler 2d order scheme for the first time step
                 C[1:-1,n] = C[1:-1,n-1] - CFL/2*(C[2:,n-1] - C[:-2,n-1])   # rev ok
 
             elif n > 1:
-                C[1:-1, n] = C[1:-1, n - 2] - CFL*(C[2:Nx, n-1] - C[0:-2, n-1])   # rev ok
+                C[1:-1, n] = C[1:-1, n-2] - CFL*(C[2:, n-1] - C[:-2, n-1])   # rev ok
             
             # Condição de fronteira
             # ---------------------
@@ -122,40 +154,28 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
                 C[[0,-1], n] = [0,0]
             
             elif cond_front == 'periódica': # ok
-                C[-1, n] = C[ 99, n-2] - CFL*(C[100, n-1] - C[98, n-1])
-                C[ 0, n] = C[100, n-2] - CFL*(C[1, n-1] - C[-1, n-1])
-                C[ 1, n] = C[ 1, n-2] - CFL*(C[2, n-1] - C[0, n-1])
-                #C[ 2, n] = C[ 2, n-2] - CFL*(C[3, n-1] - C[1, n-1])
-                
-
+                C[-1, n] = C[ 99, n-1] 
+                C[ 0, n] = C[-1, n-1] 
+      
             elif cond_front == 'radiacional': # ok
-                C[ 0, n] = C[ 0, n-1] - CFL*(C[ 1, n-1]- C[ 0, n-1])
-                C[-1, n] = C[-1, n-1] - CFL*(C[-1, n-1]- C[-2, n-1]) 
-       
-       # -------------------------------------------------
-        elif aprox == "ordem4":
-            if n == 1:
-                # Comecar ordem 2 (Euler) em n = 1 
-                C[1:-1, n] = C[1:-1, n-1] - CFL/2*(C[2:, n-1] - C[:-2, n-1])
-
-            else:
-                C[2:-2, n] = C[2:-2, n-1] - CFL*(4/3*(C[3:-1, n-1] - C[1:-3, n-1])/2 - 1/3*(C[4:, n-1] - C[:-4, n-1])/4) 
-            
-            # Condição de fronteira
-            # ---------------------
-            if cond_front == 'fixa':
-                C[[0,-1], n] = [0,0]
-            
-            elif cond_front == 'periódica': # rev ok
-                C[ 2, n] = C[  2, n-1] - CFL*(4/3*(C[  3, n-1] - C[  1, n-1])/2 - 1/3*(C[  4, n-1] - C[  0, n-1])/4)
-                C[ 1, n] = C[  1, n-1] - CFL*(4/3*(C[  2, n-1] - C[  0, n-1])/2 - 1/3*(C[  3, n-1] - C[100, n  ])/4)
-                C[ 0, n] = C[100, n-1] - CFL*(4/3*(C[  1, n-1] - C[ -1, n-1])/2 - 1/3*(C[  2, n-1] - C[ 98, n-1])/4)
-                C[-1, n] = C[ 99, n-1] - CFL*(4/3*(C[100, n-1] - C[ 98, n-1])/2 - 1/3*(C[  1, n-1] - C[ 97, n-1])/4) 
-                C[-2, n] = C[ 98, n-1] - CFL*(4/3*(C[ 99, n-1] - C[ 97, n-1])/2 - 1/3*(C[100, n-1] - C[ 96, n-1])/4)
-
-            elif cond_front == 'radiacional':
-                C[ 0, n] = C[ 0, n-1] - CFL*(C[ 1, n-1]- C[ 0, n-1])
                 C[-1, n] = C[-1, n-1] - CFL*(C[-1, n-1]- C[-2, n-1])
+                 
+       # -------------------------------------------------
+       # Fourth order on space leapfrog on time
+        elif aprox == "ordem4": 
+            if n == 1:
+                # Euler 2d order scheme for the first time step
+                C[1:-1,n] = C[1:-1,n-1] - CFL/2*(C[2:,n-1] - C[:-2,n-1])
+                C[0,n] = C[-1,n-1]
+            elif n > 1:
+                C[2:-2, n] = C[2:-2,n-2] - CFL/6*(8*(C[3:-1,n-1]-C[1:-3,n-1])-(C[4:,n-1]-C[:-4,n-1]))
+                        
+            #elif cond_front == 'periódica': # (-1, 0, 1) # second order
+                C[-2, n] = C[-2, n-2] - CFL*(C[-1, n-1] - C[-3, n-1])
+                C[1,n]   = C[1, n-1] - CFL*(C[1, n-1]- C[0, n-1])
+                C[-1, n] = C[99, n-2] - CFL/6*(8*(C[100,n-1]-C[98,n-1])-(C[1,n]-C[97,n-1]))
+                C[ 0, n] = C[100, n-2] - CFL*(C[1, n] - C[99, n-1])
+ 
 
         # -------------------------------------------------       
         elif aprox == "Matsuno": # somente periódica
@@ -169,61 +189,45 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t):
                 u[0, n] = u[-1, n-1] #- CFL*(C[-1, n-1]- C[-2, n-1])
                 C[0, n] = C[-1, n-1] #- CFL*(u[-1, n-1] - u[-2,n-1])
 
-        elif aprox == "Crank":
+        elif aprox == "Crank": 
             # spsolve: solve the sparse linear system Ax=B
             # A*C[:,n] = B*C[:, n-1]  
             C[:, n] = spsolve(A, B*C[:, n-1])
-            
-            if cond_front == 'periódica':
-                C[-1, n] = C[-1, n-1] - CFL/4*(C[0, n] - C[-2, n] + C[0, n-1] - C[-2, n-1])
-                C[0, n] = C[-1, n-1]
-
+         
+        # -------------------------------------------------
         elif aprox == "RK4":
             """
             Runge-Kutta scheme
             ------------------
-            k1      : C*^(n+1/2)
-            k2      : C^(n+1/2)
-            k3      : C*^(n+1)
             """
-            k1[1:-1,n] = C[1:-1, n-1] - CFL/2*(C[1:-1, n-1] - C[:-2, n-1])
-            k2 = k1.copy()
-            k2[1:-1,n] = C[1:-1, n-1] - CFL/2*(k1[1:-1, n-1] - k1[:-2, n-1])
-            k3 = k2.copy()
-            k3[1:-1,n] = C[1:-1, n-1] - CFL*(k2[1:-1, n-1] - k2[:-2, n-1])
-            C[1:-1, n] = C[1:-1, n-1] - CFL/6*(C[1:-1, n-1] - C[:-2, n-1] + 2*(k1[1:-1, n-1] - k1[:-2, n-1]) +2*(k2[1:-1, n-1] - k2[:-2, n-1]) + k3[1:-1, n-1] - k3[:-2, n-1])
+            k1 = deriv(c            , U, dx)
+            k2 = deriv(c + dt*0.5*k1, U, dx)
+            k3 = deriv(c + dt*0.5*k2, U, dx)
+            k4 = deriv(c + dt*k3    , U, dx)
 
-            if cond_front == 'periódica':
-                k1[-1,n] = C[-1, n-1] - CFL/2*(C[-1, n-1] - C[-2, n-1])
-                k2[-1,n] = C[-1, n-1] - CFL/2*(k1[-1, n-1] - k1[-2, n-1])
-                k3[-1,n] = C[-1, n-1] - CFL*(k2[-1, n-1] - k2[-2, n-1])
-                C[-1, n] = C[-1, n-1] - CFL/6*(C[-1, n-1] - C[-2, n-1] + 2*(k1[-1, n-1] - k1[-2, n-1]) +2*(k2[-1, n-1] - k2[-2, n-1]) + k3[-1, n-1] - k3[-2, n-1])
-                
-                k1[0,n] = k1[-1,n-1]
-                k2[0,n] = k2[-1,n-1]
-                k3[0,n] = k3[-1,n-1]
-                C[0, n] = C[-1, n-1] 
-                
-             
+            C[:,n] = c = c + (k1 + 2*k2 + 2*k3 + k4)*dt/6
+       
+        else:
+            print("Error")
+         
     return C
     
-def plot_sol_num(C, fun, aprox, cond_front, ylabel, dP, hora, Nt, CFL, U, dx, dt):
-
+def plot_sol_num(C, fun, aprox, cond_front, ylabel, dP, Nt, CFL, U, dx, dt):
+    
     fig, ax = plt.subplots(1,1, figsize=(8, 5))
-
     ax.plot(C[:,0], color = 'b', lw=3, label="Condição inicial")
 
     for n in range(1, Nt):  
         if n % dP == 0:
             ax.plot(C[:,n], color='m', linestyle='dashed', label=f"PT {n}")
-
+    hora = round((n*dt/3600),1)
     ax.plot(C[:,-1], color='g', lw=3, label = f"Final {hora} horas ")
     ax.set_ylabel(ylabel)
-    ax.set_title(f"$\Delta$t = {dt.round(0)} segundos, $\Delta$x = {dx} metros, CFL = {CFL.round(2)}.",loc='left')
+    ax.set_title(f"$\Delta$t = {dt} segundos, $\Delta$x = {dx} metros, CFL = {round(CFL,2)}.",loc='left')
     ax.legend(fontsize=8, ncol=2)
     ax.set_xlabel("Pontos da grade")
     ax.text(2,3, r"$\vec U$ = "+ f"{U} m/s.", fontsize=12)
-    ax.text(2,4, f"CFL = {CFL.round(2)}", fontsize=12)
+    #ax.text(2,4, f"CFL = {CFL.round(2)}", fontsize=12)
     fig.savefig("fig/" + aprox + "_" + fun[:3] + "_" + cond_front[:3] +"_" + str(hora) +".png", 
                 dpi = 300, bbox_inches='tight', facecolor='w')
 
@@ -233,7 +237,7 @@ def fig2gif(Nt, dP, dt, CFL, C_ref, c, ylabel, aprox, nr, cond_front, fun):
     for n in range(0,int(Nt),dP):
         # plot the line chart
         fig, ax = plt.subplots(figsize=[8,6])
-        ax.set_title(f"Hora: {(n*dt/3600).round(2)}, CFL = {CFL.round(2)}, " + r"$\Delta$t"+ f"= {dt.round(2)}")
+        ax.set_title(f"Hora: {round((n*dt/3600),1)}, CFL = {round(CFL,1)}, " + r"$\Delta$t"+ f"= {round(dt,2)}")
         ax.plot(C_ref[:,n], color = "b", label="Sol. Analítica")
         ax.plot(c[:,n], color = 'r', linestyle = 'dashed', label= aprox+f' nr: {nr}')
         ax.set_ylim(-4,15)
