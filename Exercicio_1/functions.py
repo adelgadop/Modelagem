@@ -20,7 +20,7 @@ def Rect(x):
     --------------------
     Centered in 50, 51, 52
     """
-    return np.where((x >= (50*5_000)) & (x <= (52*5_000)), 10, 0 )
+    return np.where((x >= (50*5_000)) & (x <= (52*5_000)), 5, 0 )
 
 def crank_matrix(x, CFL, uc):
     """
@@ -85,8 +85,8 @@ def sol_analytical(fun, x, U, Nx, Nt, nr, dt, t):
                     #RE[0, n] = RE[-1, n-1]
 
                 elif fun == "Retângulo":
-                    ab = np.where((x >= (50*5_000 + U*t[n])) & (x <= (52*5_000 + U*t[n])), 10, 0 )
-                    ba = np.where((x >= (-50*5_000 + U*t[n])) & (x <= (-48*5_000 + U*t[n])), 10, 0 )
+                    ab = np.where((x >= (50*5_000 + U*t[n])) & (x <= (52*5_000 + U*t[n])), 5, 0 )
+                    ba = np.where((x >= (-50*5_000 + U*t[n])) & (x <= (-48*5_000 + U*t[n])), 5, 0 )
                     RE[:,n] = np.maximum(ab,ba)
                     #RE[0, n] = RE[-1, n-1]
                 

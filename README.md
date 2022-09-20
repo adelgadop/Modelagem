@@ -26,7 +26,7 @@ Exercicíos desenvolvidos em Python como parte dos estudos de doutorado em meteo
      
 - [ ] Apresentar o exercício na forma de um "paper": introdução, metodologia, resultados e discussão dos resultados.    
   - Para gerar o pdf usando pandoc:
-   `pandoc -H format.sty --bibliography biblio.bib --citeproc paper.md -o paper.pdf`
+   `pandoc -V lang=pt -H format.sty paper.md --filter pandoc-crossref --citeproc -o paper.pdf`
   - [ ] Introdução
   - [ ] Metodologia
   - [ ] Resultados
