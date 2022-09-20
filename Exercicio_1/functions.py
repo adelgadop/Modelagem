@@ -82,13 +82,11 @@ def sol_analytical(fun, x, U, Nx, Nt, nr, dt, t):
                     ab = 10*np.exp(-(x - U*t[n] - (Nx-50)*5000)**2/(nr*5000)**2)
                     ba = 10*np.exp(-(x - U*t[n] + (Nx-51)*5000)**2/(nr*5000)**2)
                     RE[:,n] = np.maximum(ab, ba)
-                    #RE[0, n] = RE[-1, n-1]
 
                 elif fun == "Retângulo":
                     ab = np.where((x >= (50*5_000 + U*t[n])) & (x <= (52*5_000 + U*t[n])), 5, 0 )
                     ba = np.where((x >= (-50*5_000 + U*t[n])) & (x <= (-48*5_000 + U*t[n])), 5, 0 )
                     RE[:,n] = np.maximum(ab,ba)
-                    #RE[0, n] = RE[-1, n-1]
                 
     else:
         print("precisa de codigo")
@@ -176,7 +174,6 @@ def sol_num(aprox, cond_front, fun, CFL, nr, Nx, Nt, x, dx, U, t, dt):
                 C[-1, n] = C[99, n-2] - CFL/6*(8*(C[100,n-1]-C[98,n-1])-(C[1,n]-C[97,n-1]))
                 C[ 0, n] = C[100, n-2] - CFL*(C[1, n] - C[99, n-1])
  
-
         # -------------------------------------------------       
         elif aprox == "Matsuno": # somente periódica
             # Start with Euler forward
@@ -227,7 +224,6 @@ def plot_sol_num(C, fun, aprox, cond_front, ylabel, dP, Nt, CFL, U, dx, dt):
     ax.legend(fontsize=8, ncol=2)
     ax.set_xlabel("Pontos da grade")
     ax.text(2,3, r"$\vec U$ = "+ f"{U} m/s.", fontsize=12)
-    #ax.text(2,4, f"CFL = {CFL.round(2)}", fontsize=12)
     fig.savefig("fig/" + aprox + "_" + fun[:3] + "_" + cond_front[:3] +"_" + str(hora) +".png", 
                 dpi = 300, bbox_inches='tight', facecolor='w')
 

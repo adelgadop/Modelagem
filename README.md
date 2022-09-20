@@ -19,18 +19,18 @@ Exercicíos desenvolvidos em Python como parte dos estudos de doutorado em meteo
         1. [x] Periódica
      5. [x] Use um `método implícito` (e.g., Crank-Nicolson scheme).
         1. [x] Periódica
-     6. [ ] Finalmente, use um Runge Kutta de 4ª ordem no tempo com um esquema de 4to ordem no espaço
+     6. [x] Finalmente, use um Runge Kutta de 4ª ordem no tempo com um esquema de 4to ordem no espaço
         1. [x] Periódica
      
      Obs: quanto a CF, não é necessário fazer os 3 casos (fixa, radiacional e periódica) para todos os experimentos. Faça apenas para o caso Leapfrog. Nos demais, faça sempre a CF periódica.
      
-- [ ] Apresentar o exercício na forma de um "paper": introdução, metodologia, resultados e discussão dos resultados.    
+- [x] Apresentar o exercício na forma de um "paper": introdução, metodologia, resultados e discussão dos resultados.    
   - Para gerar o pdf usando pandoc:
    `pandoc -V lang=pt -H format.sty paper.md --filter pandoc-crossref --citeproc -o paper.pdf`
-  - [ ] Introdução
-  - [ ] Metodologia
-  - [ ] Resultados
-  - [ ] Discusão dos resultados
+  - [x] Introdução
+  - [x] Metodologia
+  - [x] Resultados e discussão
+  - [x] Conclussões preliminares
 
      
 
