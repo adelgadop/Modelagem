@@ -9,7 +9,11 @@ author: |
 keywords: [1D Advecção, Métodos numéricos, RK4]
 link-citations: true
 urlcolor: "blue"
+lang: pt
 bibliography: "biblio.bib"
+tblPrefix:
+  - "Tabela"
+  - "Tabelas"
 csl: "https://raw.githubusercontent.com/citation-style-language/styles/master/aerosol-and-air-quality-research.csl"
 abstract: 
     O transporte dos poluentes na atmosfera acontece para diferentes níveis de escala temporal e espacial com impactos globais e locais, pelo que estudar este fenômeno é de interesse para achar soluções com modelos representativos.  Este trabalho mostra as soluções numéricas relacionadas com o problema de transporte de um pulso inicial de poluição com vento constante, representado pela equação de advecção em 1D. A solução do exercício considerou condições iniciais e de fronteira para ondas tipo gaussiana e retângulo, todas elas representam três diferentes comprimentos de onda. Além da aplicação do esquema numérico, os resultados também foram acompanhados da solução analítica. 
@@ -18,7 +22,7 @@ abstract:
 ---
 
 # 1. Introdução
-O transporte das espécies químicas na atmosfera e as propriedades das massas de ar são afetadas pelo movimento na escala global, baixando até níveis de alta resolução em milímetros. A física deste fenômeno é de interesse para entender o impacto da natureza nas atividades humanas e vice-versa. A ideia é conseguir um modelo muito representativo da realidade que mostra como as propriedades conservativas são transportadas pelos ventos, conhecido como advecção. Atualmente, os modelos numéricos usam aproximações para resolver o escoamento, também assimilam observações das estações meteorológicas para forçar o modelo a representar condições reais, mas com altos custos computacionais. Os métodos numéricos usados nos modelos tentam aproximar as soluções das equações de derivadas parciais. A aplicação do método para resolver a advecção de alguma propriedade conservativa no espaço e tempo tem como objetivo nove considerações [Rasch e Williamson, 1990, citado em @Brasseur2017]: 1) precisão, 2) estabilidade, 3) monotonicidade, 4) conservação, 5) transportabilidade, 6) localidade, 7) correlatividade, 8) flexibilidade e 9) eficiência.
+O transporte das espécies químicas na atmosfera e as propriedades das massas de ar são afetadas pelo movimento na escala global, baixando até níveis de alta resolução em milímetros. A física deste fenômeno é de interesse para entender o impacto da natureza nas atividades humanas e vice-versa. A ideia é conseguir um modelo muito representativo da realidade que mostra como as propriedades conservativas são transportadas pelos ventos, conhecido como advecção. Atualmente, os modelos numéricos usam aproximações para resolver o escoamento, também assimilam observações das estações meteorológicas para forçar o modelo a representar condições reais, mas com altos custos computacionais. Os métodos numéricos usados nos modelos tentam aproximar as soluções das equações de derivadas parciais. A aplicação do método para resolver a advecção de alguma propriedade conservativa no espaço e tempo tem como objetivo nove considerações [Rasch e Williamson, 1990, citado em @Brasseur2017]: 1) precisão, 2) estabilidade, 3) monotonicidade, 4) conservação, 5) transportabilidade, 6) localidade, 7) correlatividade, 8) flexibilidade e 9) eficiênci.
 
 $$ 
 \frac{\partial C}{\partial t} + U*\frac{\partial C}{\partial x} = 0 
@@ -38,17 +42,17 @@ O método é monotônico (preserva o sinal), mas com pouca precisão por ser de 
 ### Método leapfrog
 O esquema *leapfrog* está caracterizado por ser de segundo ordem no tempo, baseado na aproximação da equação de advecção centrada no tempo e espaço, expresado como segue:
 $$ \frac{C^{n+1}_j - C^{n-1}_j}{2\Delta t} = -U*\frac{C^n_{j+1} - C^n_{j-1}}{2\Delta x} $$ {#eq:or1}
-Em condições estáveis do número de Courant ($\alpha < 1$), a aproximação mostra uma preservação da amplitude da onda ao longo do tempo, com $\alpha = 1$ a solução é exata. No entanto, para ondas curtas pode gerar dispersão computacional como erros de fase com oscilações espúrias (@fig:1). A análise de dispersão para diferentes comprimentos de onda (L) explica este comportamento, assim temos que a função retângulo tem 2$\Delta$x = L e as duas gaussianas com maiores L (entre 10$\Delta x$ e 50$\Delta x$). Se substituímos a discretização do método *leapfrog* na solução da onda temos $C^n_j=C_0e^{ik(j\Delta x-C_Dn\Delta t)}$, obtemos $C_D/c = \frac{1}{\alpha k\Delta x}arcsin[\alpha sin(k\Delta x)]$, onde C$_D$ é a velocidade de fase computacional em função do número de onda $k$ que depende da resolução de $\Delta x$; as diferenças finitas no espaço geram a dispersão computacional [@Doos2020]. Conforme os mesmos autores, também temos a velocidade de grupo $C_{Dg}$ expressado em relação com a velocidade de fase ($c$) que é mostrado na @eq:dleap
+Em condições estáveis do número de Courant ($\alpha < 1$), a aproximação mostra uma preservação da amplitude da onda ao longo do tempo, com $\alpha = 1$ a solução é exata. No entanto, para ondas curtas pode gerar dispersão computacional como erros de fase com oscilações espúrias (@Fig:1). A análise de dispersão para diferentes comprimentos de onda (L) explica este comportamento, assim temos que a função retângulo tem 2$\Delta$x = L e as duas gaussianas com maiores L (entre 10$\Delta x$ e 50$\Delta x$). Se substituímos a discretização do método *leapfrog* na solução da onda temos $C^n_j=C_0e^{ik(j\Delta x-C_Dn\Delta t)}$, obtemos $C_D/c = \frac{1}{\alpha k\Delta x}arcsin[\alpha sin(k\Delta x)]$, onde C$_D$ é a velocidade de fase computacional em função do número de onda $k$ que depende da resolução de $\Delta x$; as diferenças finitas no espaço geram a dispersão computacional [@Doos2020]. Conforme os mesmos autores, também temos a velocidade de grupo $C_{Dg}$ expressado em relação com a velocidade de fase ($c$) que é mostrado na @eq:dleap
 $$\frac{C_{Dg}}{c_g}=\frac{cos(k\Delta x)}{\sqrt{1-[\alpha sin(k\Delta x)]^2}}. $${#eq:dleap}
 
-![Oscilações espúrias para ondas curtas com o método *leapfrog*](fig/lea_all_per_13.9.png){#fig:1}
+![Oscilações espúrias para ondas curtas com o método *leapfrog*](fig/lea_all_per.png){#fig:1}
 
 ### Esquema de 4o ordem
 O método *leapfrog* é de segundo ordem no tempo e espaço. Dele, consideramos a aproximação da derivada no tempo e modificamos a parte da derivada no espaço com uma aproximação de 4o ordem [@Doos2020], então temos a @eq:4o $$\frac{C^{n+1}_j-C^{n-1}_j}{2\Delta t}+U\frac{C^n_{j-2}-8 C^n_{j-1}+8 C^n_{j+1}-C^n_{j+2}}{12\Delta x}=0 $${#eq:4o}
 Se consideramos o análise de estabilidade de von Neumann, a discretização leva:
 $$ g(k) = -i \frac{\alpha}{6} \left[8 sin(k\Delta x) - sin(2k\Delta x)\right] 
    \pm \{1 - \left[\frac{\alpha}{6}\left[8 sin(k\Delta x)-sin(2k\Delta x)\right]\right]^2 \}^{1/2}
-$$ {#eq:v4o} onde $i=\sqrt{-1}$ e $k$ o número de onda. O esquema fica estável se $$\alpha < \frac{6}{8sin(k\Delta x)-sin(2k\Delta x))} $${#eq:s4o} para $\alpha$ < 0,73 [@Doos2020] e instável para valores maiores como ilustra a @fig:2. 
+$$ {#eq:v4o} onde $i=\sqrt{-1}$ e $k$ o número de onda. O esquema fica estável se $$\alpha < \frac{6}{8sin(k\Delta x)-sin(2k\Delta x))} $${#eq:s4o} para $\alpha$ < 0,73 [@Doos2020] e instável para valores maiores como ilustra a @Fig:2. 
 
 ![Variação da estabilidade do esquema de 4o ordem no espaço para diferentes números de Courant (CFL).](fig/o4_deltas_tper.png){#fig:2}
 
@@ -101,7 +105,7 @@ $$C^{n+1}=C^n+\frac{\Delta t}{6}\left[k_1+k_1+2k_2+2k_3+k_4\right] $${#eq:rk4} o
 # 2. Descrição da metodologia
 O desenvolvimento do exercício considera dois tipos de funções, chamados Gaussiana e Retângulo. A função gaussiana está centrada em j=51, com decaimento exponencial dado por `nr` (número de pontos) onde a amplitude da perturbação segue a expressão da @eq:gau $$ C(x,0) = C_{j,0} = C_0 \exp[\frac{-(j\Delta x - 51\Delta x)^2}{(nr*\Delta x)^2}], $${#eq:gau} a função retângulo também está centrada na grade unidimensional com amplitude $2\Delta x$, como é ilustrado na @fig:1 (abaixo para o tempo n=0). A malha tem espaçamento uniforme $x_j$ com $\Delta x = 5000 m$, $x_j = j\Delta x$, com $j=1$, $Nx = 101$. A velocidade $U$ é constante e igual a 10 m/s. A integração para cada esquema considerou o tempo suficiente para que a perturbação inicial volte para a parte central da malha no caso da fronteira periódica; calculado em 14 horas aproximadamente.
 
- As soluções analíticas foram encontradas para acompanhar os resultados das aproximações numéricas para os diferentes esquemas. As condições de fronteira usadas para cada esquema são mostradas na [@tbl:1]. O código usado para desenvolver cada esquema de aproximação foi desenvolvido na linguagem de `Python`. As condições periódicas foram um desafio para escrever o código em Python, sendo mais simples para o esquema de ordem 1 e complexas para os demais. A seção [Apêndice A](#apêndice-a) mostra um resumo das principais partes do código escrito para resolver os diferentes esquemas numéricos. O *script* completo está disponível no repositório de GitHub do autor, na pasta "Exercicio_1" no link a seguir **[functions.py](https://github.com/adelgadop/Modelagem/blob/main/Exercicio_1/functions.py)**.
+ As soluções analíticas foram encontradas para acompanhar os resultados das aproximações numéricas para os diferentes esquemas. As condições de fronteira usadas para cada esquema são mostradas na [@Tbl:1]. O código usado para desenvolver cada esquema de aproximação foi desenvolvido na linguagem de `Python`. As condições periódicas foram um desafio para escrever o código em Python, sendo mais simples para o esquema de ordem 1 e complexas para os demais. A seção [Apêndice A](#apêndice-a) mostra um resumo das principais partes do código escrito para resolver os diferentes esquemas numéricos. O *script* completo está disponível no repositório de GitHub do autor, na pasta "Exercicio_1" no link a seguir **[functions.py](https://github.com/adelgadop/Modelagem/blob/main/Exercicio_1/functions.py)**.
 
 Esquema         Condição de fronteira
 --------        ---------------------
