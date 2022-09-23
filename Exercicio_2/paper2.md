@@ -9,7 +9,7 @@ author: |
 keywords: [1D Advecção, Métodos numéricos]
 link-citations: true
 urlcolor: "blue"
-bibliography: "biblio.bib"
+bibliography: "../biblio.bib"
 csl: "https://raw.githubusercontent.com/citation-style-language/styles/master/aerosol-and-air-quality-research.csl"
 abstract: 
     xxxx

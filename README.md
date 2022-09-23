@@ -36,7 +36,9 @@ Vamos supor que você tenha uma fonte de poluição pontual (pe. uma chaminé) q
 
 $\frac{\partial C}{\partial t}+U \frac{\partial C}{\partial x}=F$ onde $F=F(x,t)$
 
-$F(i=51, n\Delta t)=0$ caso $sin(\omega .n\Delta)< 0$ como $\omega = \frac{2\pi}{1800}$ $s^{-1}$
+$F(i=51, n\Delta t)= sin(\omega .n\Delta t)$ para n = 0, ... N$_{max}$ se $sin(\omega .n.\Delta t) > 0$
+
+$F(i=51, n\Delta t)=0$ caso $sin(\omega .n\Delta t)< 0$ como $\omega = \frac{2\pi}{1800}$ $s^{-1}$
 - [ ] Discuta a forma da solução analítica no diagrama de Hovmoller (x,t)
 - [ ] Resolva numéricamente com os esquemas:
   - [ ] (a) Avançado no tempo atrasado no espaço

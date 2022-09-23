@@ -7,8 +7,10 @@ author: |
     | *Instituto de Astronomia, Geofísica e Ciências Atmosféricas da Universidade de São Paulo*
     | 
 keywords: [1D Advecção, Métodos numéricos, RK4]
+documentclass: article
 link-citations: true
 urlcolor: "blue"
+classoption: twocolumn
 lang: pt
 bibliography: "biblio.bib"
 tblPrefix:
@@ -22,7 +24,7 @@ abstract:
 ---
 
 # 1. Introdução
-O transporte das espécies químicas na atmosfera e as propriedades das massas de ar são afetadas pelo movimento na escala global, baixando até níveis de alta resolução em milímetros. A física deste fenômeno é de interesse para entender o impacto da natureza nas atividades humanas e vice-versa. A ideia é conseguir um modelo muito representativo da realidade que mostra como as propriedades conservativas são transportadas pelos ventos, conhecido como advecção. Atualmente, os modelos numéricos usam aproximações para resolver o escoamento, também assimilam observações das estações meteorológicas para forçar o modelo a representar condições reais, mas com altos custos computacionais. Os métodos numéricos usados nos modelos tentam aproximar as soluções das equações de derivadas parciais. A aplicação do método para resolver a advecção de alguma propriedade conservativa no espaço e tempo tem como objetivo nove considerações [Rasch e Williamson, 1990, citado em @Brasseur2017]: 1) precisão, 2) estabilidade, 3) monotonicidade, 4) conservação, 5) transportabilidade, 6) localidade, 7) correlatividade, 8) flexibilidade e 9) eficiênci.
+O transporte das espécies químicas na atmosfera e as propriedades das massas de ar são afetadas pelo movimento na escala global, baixando até níveis de alta resolução em milímetros. A física deste fenômeno é de interesse para entender o impacto da natureza nas atividades humanas e vice-versa. A ideia é conseguir um modelo muito representativo da realidade que mostra como as propriedades conservativas são transportadas pelos ventos, conhecido como advecção. Atualmente, os modelos numéricos usam aproximações para resolver o escoamento, também assimilam observações das estações meteorológicas para forçar o modelo a representar condições reais, mas com altos custos computacionais. Os métodos numéricos usados nos modelos tentam aproximar as soluções das equações de derivadas parciais. A aplicação do método para resolver a advecção de alguma propriedade conservativa no espaço e tempo tem como objetivo nove considerações [Rasch e Williamson, 1990, citado em @Brasseur2017]: 1) precisão, 2) estabilidade, 3) monotonicidade, 4) conservação, 5) transportabilidade, 6) localidade, 7) correlatividade, 8) flexibilidade e 9) eficiência.
 
 $$ 
 \frac{\partial C}{\partial t} + U*\frac{\partial C}{\partial x} = 0 
