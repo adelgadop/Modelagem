@@ -6,10 +6,16 @@ author: |
     |
     | *Instituto de Astronomia, Geofísica e Ciências Atmosféricas da Universidade de São Paulo*
     | 
-keywords: [1D Advecção, Métodos numéricos]
+keywords: [1D Advecção, Métodos numéricos, RK4]
+documentclass: article
 link-citations: true
 urlcolor: "blue"
+classoption: onecolumn
+lang: pt
 bibliography: "../biblio.bib"
+tblPrefix:
+  - "Tabela"
+  - "Tabelas"
 csl: "https://raw.githubusercontent.com/citation-style-language/styles/master/aerosol-and-air-quality-research.csl"
 abstract: 
     xxxx
@@ -30,6 +36,9 @@ Este trabalho apresenta x.
 xxx 
 
 # 3. Resultados
+A @Fig:1
+
+![Diagrama Hovmoller da solução analítica](fig/fonte.png){#fig:1}
 
 xxx
 
