@@ -39,17 +39,17 @@ $\frac{\partial C}{\partial t}+U \frac{\partial C}{\partial x}=F$ onde $F=F(x,t)
 $F(i=51, n\Delta t)= sin(\omega .n\Delta t)$ para n = 0, ... N$_{max}$ se $sin(\omega .n.\Delta t) > 0$
 
 $F(i=51, n\Delta t)=0$ caso $sin(\omega .n\Delta t)< 0$ como $\omega = \frac{2\pi}{1800}$ $s^{-1}$
-- [ ] Discuta a forma da solução analítica no diagrama de Hovmoller (x,t)
-- [ ] Resolva numéricamente com os esquemas:
-  - [ ] (a) Avançado no tempo atrasado no espaço
-  - [ ] (b) Leapfrog 2ª ordem
-  - [ ] (c) 4ª ordem no espaço
-  - [ ] (d) Implícito (e.g., Crank-Nicolson)
+- [x] Discuta a forma da solução analítica no diagrama de Hovmoller (x,t)
+- [x] Resolva numéricamente com os esquemas:
+  - [x] (a) Avançado no tempo atrasado no espaço
+  - [x] (b) Leapfrog 2ª ordem
+  - [x] (c) 4ª ordem no espaço
+  - [x] (d) Implícito (e.g., Crank-Nicolson)
   
 com a mesma malha do `Exercício 1`. Porém, use uma CI identicamente nula em todo o domínio e com a fonte da grandeza $F$ dada pela expressão acima no ponto central da malha.
 Como condição de fronteira do lado direito da malha, no caso Leapfrog e 4ª ordem, a solução dada pelo esquema de 1ª ordem (a). Observe que este esquema permite que a perturbação passe pela fronteira, sem reflexão.
-- [ ] (e) É realista a solução no caso Leapfrog e 4ª ordem? Explique por qué a concentração não é nula à esquerda da fonte. Como tornar o resultado mais realista? (dica... filtragem...)
-- [ ] (f) O que acontece com o método implícito? Observe que é incondicionalmente estável. Portanto, o $\Delta t$ pode tornar o CFL > 1 e manter a estabilidade. O que acontece com a solução a medida que $\Delta t$ aumenta acima de 1 (experimente com CFL=2, 4...)
+- [x] (e) É realista a solução no caso Leapfrog e 4ª ordem? Explique por qué a concentração não é nula à esquerda da fonte. Como tornar o resultado mais realista? (dica... filtragem...)
+- [x] (f) O que acontece com o método implícito? Observe que é incondicionalmente estável. Portanto, o $\Delta t$ pode tornar o CFL > 1 e manter a estabilidade. O que acontece com a solução a medida que $\Delta t$ aumenta acima de 1 (experimente com CFL=2, 4...)
 
 - [ ] Apresente o exercício na forma de um "paper", ou seja:
   - [ ] Introdução sobre o tema
