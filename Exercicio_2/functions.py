@@ -17,6 +17,31 @@ def euler_back(C, n, CFL, dt, F):
     C[1:, n] = C[1:, n-1] + F[1:, n-1]*dt - CFL*(C[1:, n-1]- C[:-1, n-1])
     return C
 
+def filtro_all(C, alfa, f_space=False, f_time=False):
+    """Filtro Robert-Asselin para remover o modo computacional
+
+    Args:
+        C (array): Campos nulos com a emissão na metade
+        n (int): passo de tempo
+        alfa (float, optional): Coeficiente.
+        f_space (bool, optional): Filtro no espaço. Defaults to False.
+        f_time (bool, optional): Filtro no tempo. Defaults to False.
+
+    Returns:
+        array: valores de C filtrados
+    """
+    # Filtro Asselin desde a mitade da grade
+    if f_space == True:
+        C[1:-1,:] = C[1:-1, :] + alfa*(C[:-2, :] - 2*C[1:-1, :] + C[2:, :])
+    
+    if f_time == True:
+        C[:,1:-1] = C[:, 1:-1] + alfa*(C[:, :-2] - 2*C[:, 1:-1] + C[:, 2:])
+        
+    else:
+        pass
+    
+    return C
+
 def filtro(C, alfa, f_space=False, f_time=False):
     """Filtro Robert-Asselin para remover o modo computacional
 
