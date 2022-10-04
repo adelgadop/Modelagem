@@ -51,11 +51,11 @@ Como condição de fronteira do lado direito da malha, no caso Leapfrog e 4ª or
 - [x] (e) É realista a solução no caso Leapfrog e 4ª ordem? Explique por qué a concentração não é nula à esquerda da fonte. Como tornar o resultado mais realista? (dica... filtragem...)
 - [x] (f) O que acontece com o método implícito? Observe que é incondicionalmente estável. Portanto, o $\Delta t$ pode tornar o CFL > 1 e manter a estabilidade. O que acontece com a solução a medida que $\Delta t$ aumenta acima de 1 (experimente com CFL=2, 4...)
 
-- [ ] Apresente o exercício na forma de um "paper", ou seja:
-  - [ ] Introdução sobre o tema
-  - [ ] Descrição da metodologia,
-  - [ ] Resultados
-  - [ ] Discussão dos resultados. 
+- [x] Apresente o exercício na forma de um "paper", ou seja:
+  - [x] Introdução sobre o tema
+  - [x] Descrição da metodologia,
+  - [x] Resultados
+  - [x] Discussão dos resultados. 
 
 Para gerar o pdf usando pandoc:
    `pandoc -H format.sty paper.md --filter pandoc-crossref --citeproc -o paper.pdf`
@@ -66,6 +66,30 @@ Explorar modo computacional no espaço, liga a fonte o vento vai transportar na 
 
 **Brincadeira**: Cada 1800 vai emitir a chaminé. O objetivo é $\Delta t$ pensar no fenómeno. Cuidado com o esquema implícito na relação $\Delta t$ e CFL.
 
+## Exercicío 3
+> Problema No. 3  - Advecção com difusão e forçante
+> Apresentação dos resultados em **(12/10/2022)**
+
+Vamos simular uma situação mais realista do Problema 2 (advecção com fonte do poluente) ao introduzir o efeito da difusão. Portanto, a equação que governa este problema é dada por:
+
+$\frac{\partial C}{\partial t} + U \frac{\partial C}{\partial x} = K \frac{\partial^2C}{\partial^2 x} + F$
+
+Use a mesma fonte periódica do Ex 2, mesma malha no espaço e determine o K de forma que o tempo de decaimento seja da ordem de 3 h. Inicialmente coloque o F no tempo n. Faça o 
+
+$\frac{\partial C}{\partial t} \rArr \frac{(C^{n+1} - C^{n-1})}{2 \Delta t} $
+
+Mantenha a CF radiacional do Ex 2. 
+
+- [ ] a. Resolva numericamente com o esquema Leapfrog na advecção e a difusão no tempo n-1, forcante no tempo n-1.
+- [ ] b. Introduza a forçante pelo método splitting
+  - [ ] 1. Verifique experimentalmente o critério discutido em Doos et al. Figura 8.6  para a estabilidade numérica do esquema, através de variações do U e K com F = 0
+  - [ ] 2.	Com o F do Problema 2 , discuta o efeito do splitting. OU seja, compare a solução com o F calculado no tempo n-1 com a solução em 2 passos. NO primeiro passo  (\*) calcule somente o efeito da advecção e difusão e no segundo passo calcule a forçante com a estimativa  no primeiro passo (\*).
+
+Apresente o exercício na forma de um paper, ou seja,  com uma 
+- [ ] introdução sobre o tema, 
+- [ ] descrição da metodologia, 
+- [ ] resultados e 
+- [ ] discussão dos resultados.  Pode retirar toda a discussão teórica  sobre a advecção e forçante. Foque na difusão e na questão da forma de introduzir a forçante.
 
 
 
