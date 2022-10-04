@@ -68,6 +68,7 @@ Explorar modo computacional no espaço, liga a fonte o vento vai transportar na 
 
 ## Exercicío 3
 > Problema No. 3  - Advecção com difusão e forçante
+> 
 > Apresentação dos resultados em **(12/10/2022)**
 
 Vamos simular uma situação mais realista do Problema 2 (advecção com fonte do poluente) ao introduzir o efeito da difusão. Portanto, a equação que governa este problema é dada por:
@@ -76,7 +77,7 @@ $\frac{\partial C}{\partial t} + U \frac{\partial C}{\partial x} = K \frac{\part
 
 Use a mesma fonte periódica do Ex 2, mesma malha no espaço e determine o K de forma que o tempo de decaimento seja da ordem de 3 h. Inicialmente coloque o F no tempo n. Faça o 
 
-$\frac{\partial C}{\partial t} \rArr \frac{(C^{n+1} - C^{n-1})}{2 \Delta t} $
+$\frac{\partial C}{\partial t} \rarr \frac{(C^{n+1} - C^{n-1})}{2 \Delta t} $
 
 Mantenha a CF radiacional do Ex 2. 
 
