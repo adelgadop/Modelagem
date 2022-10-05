@@ -13,91 +13,86 @@ def wave(t, n):
 
     return fonte(res)
 
-def euler_back(C, n, CFL, dt, F):
-    C[1:, n] = C[1:, n-1] + F[1:, n-1]*dt - CFL*(C[1:, n-1]- C[:-1, n-1])
-    return C
+def euler_back(C, Nt, F, t, dt, CFL, Nx):
+    for n in range(1, Nt-1):
+        F[101, n] = 1/2*(wave(t, n)+wave(t, n-1))
+        # advecção ordem 1
 
-def filtro_all(C, alfa, f_space=False, f_time=False):
-    """Filtro Robert-Asselin para remover o modo computacional
-
-    Args:
-        C (array): Campos nulos com a emissão na metade
-        n (int): passo de tempo
-        alfa (float, optional): Coeficiente.
-        f_space (bool, optional): Filtro no espaço. Defaults to False.
-        f_time (bool, optional): Filtro no tempo. Defaults to False.
-
-    Returns:
-        array: valores de C filtrados
-    """
-    # Filtro Asselin desde a mitade da grade
-    if f_space == True:
-        C[1:-1,:] = C[1:-1, :] + alfa*(C[:-2, :] - 2*C[1:-1, :] + C[2:, :])
-    
-    if f_time == True:
-        C[:,1:-1] = C[:, 1:-1] + alfa*(C[:, :-2] - 2*C[:, 1:-1] + C[:, 2:])
-        
-    else:
-        pass
-    
-    return C
-
-def filtro(C, alfa, f_space=False, f_time=False):
-    """Filtro Robert-Asselin para remover o modo computacional
-
-    Args:
-        C (array): Campos nulos com a emissão na metade
-        n (int): passo de tempo
-        alfa (float, optional): Coeficiente.
-        f_space (bool, optional): Filtro no espaço. Defaults to False.
-        f_time (bool, optional): Filtro no tempo. Defaults to False.
-
-    Returns:
-        array: valores de C filtrados
-    """
-    # Filtro Asselin desde a mitade da grade
-    if f_space == True:
-        C[1:100,:] = C[1:100, :] + alfa*(C[:99, :] - 2*C[1:100, :] + C[2:101, :])
-    
-    if f_time == True:
-        C[:100,1:-1] = C[:100, 1:-1] + alfa*(C[:100, :-2] - 2*C[:100, 1:-1] + C[:100, 2:])
-        
-    else:
-        pass
-    
-    return C
-
-def leap2(C, n, CFL, dt, F, f_space=False, f_time = False, alfa=0.105):
-    if n == 1:
-    # Euler
-        C = euler_back(C, n, CFL, dt, F)   
-
-    elif n > 1:
-        C[1:-1, n] = C[1:-1, n-2] + 2*dt*F[1:-1, n-1]- CFL*(C[2:, n-1] - C[:-2, n-1])   
+        for i in range(1, Nx-1):
+            C[i, n+1] = C[i, n] + F[i, n]*dt - CFL*(C[i, n]- C[i-1, n])
         # radiacional
-        C[-1, n] = C[-1, n-1] + F[-1,n-1]*dt - CFL*(C[-1, n-1]- C[-2, n-1])
-    
-    # Filtro Robert-Asselin
-    C = filtro(C, alfa, f_space, f_time)
-   
+        C[-1, n+1] = C[-1, n] - CFL*(C[-1, n]- C[-2, n])
     return C
 
-def ordem4(C,n, CFL, dt, F, f_space=False, f_time = False, alfa=0.105):
-    # Aprox leapfrog 4a ordem
-    # --------------
-    if n == 1:
-        # Euler
-        C = euler_back(C, n, CFL, dt, F)  
+def filter(C, gamma, alfa, n, Nx, f_space, f_time):
+    """Filtro Robert-Asselin-Williams para remover o modo computacional
+    gamma = 0.1 ou 0.01
+    alfa = 0.53
+    """
+    for i in range(1, Nx-1):
+        if f_time == True:
+            C[i,  n] = C[i, n  ] +     gamma*alfa/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+            C[i,n+1] = C[i, n+1] - gamma*(1-alfa)/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+        
+        elif f_space == True:
+            C[i ,  n] = C[i,   n] +     gamma*alfa/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
+            C[i+1, n] = C[i+1, n] - gamma*(1-alfa)/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
+    return C
 
-    elif n > 1:
-        C[2:-2, n] = C[2:-2,n-2] + F[2:-2,n-1]*2*dt - CFL/6*(C[:-4,n-1] - 8*C[1:-3,n-1] + 8*C[3:-1,n-1] - C[4:,n-1])
+def leap2(C, F, t, dt, CFL, Nt, Nx, gamma, alfa, f_space, f_time):
+    for n in range(1, Nt-1):
+        F[101, n] = 1/2*(wave(t, n)+wave(t, n-1))
+               
+        if n == 1: # Euler
+            for i in range(1, Nx-1):
+                C[i, n+1] = C[i, n] + F[i, n]*dt - CFL*(C[i, n]- C[i-1, n])
+                
+        if n > 1: # leapfrog
+            for i in range(1, Nx-1):
+                C[i, n+1] = C[i, n-1] + F[i, n]*2*dt - CFL*(C[i+1, n]- C[i-1, n])
+            
         # radiacional
-        C[-2, n] = C[-2, n-1] + F[-2,n-1]*dt - CFL*(C[-2, n-1] - C[-3, n-1])
-        C[-1, n] = C[-1, n-1] + F[-1,n-1]*dt - CFL*(C[-1, n-1] - C[-2, n-1])
-    
-    # Filtro Robert-Asselin
-    C = filtro(C, alfa, f_space, f_time)
-    
+        C[-1, n+1] = C[-1, n] - CFL*(C[-1, n]- C[-2, n])  
+            
+        # Robert-Asselin-Williams filter
+        for i in range(1, Nx-1):
+            if f_time == True:
+                C[i,  n] = C[i, n  ] +     gamma*alfa/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+                C[i,n+1] = C[i, n+1] - gamma*(1-alfa)/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+            
+            if f_space == True:
+                C[i ,  n] = C[i,   n] +     gamma*alfa/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
+                C[i+1, n] = C[i+1, n] - gamma*(1-alfa)/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
+
+    return C
+
+def ordem4(C,  F, t, dt, CFL, Nt, Nx,  gamma, alfa, f_space, f_time):
+    for n in range(1, Nt-1):
+        # Aprox leapfrog 4a ordem
+        # --------------
+        F[101, n] = 1/2*(wave(t, n)+wave(t, n-1))
+        if n == 1:
+            # Euler
+            C = euler_back(C, Nt, F, t, dt,CFL, Nx)  
+
+        elif n > 1:
+            
+            C[2:-2, n+1] = C[2:-2,n-1] + F[2:-2,n]*2*dt - CFL/6*(C[:-4,n] - 8*C[1:-3,n] + 8*C[3:-1,n] - C[4:,n])
+                                
+            # radiacional
+            C[-2, n+1] = C[-2, n] + F[-2,n]*dt - CFL*(C[-2, n] - C[-3, n])
+            C[-1, n+1] = C[-1, n] + F[-1,n]*dt - CFL*(C[-1, n] - C[-2, n])
+            
+        # Robert-Asselin-Williams filter
+        for i in range(1, Nx-1):
+            if f_time == True:
+                C[i,  n] = C[i, n  ] +     gamma*alfa/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+                C[i,n+1] = C[i, n+1] - gamma*(1-alfa)/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+            
+            if f_space == True:
+                C[i ,  n] = C[i,   n] +     gamma*alfa/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
+                C[i+1, n] = C[i+1, n] - gamma*(1-alfa)/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
+      
     return C
 
 def crank_matrix(CFL, x, uc=0.5):
@@ -112,42 +107,56 @@ def crank_matrix(CFL, x, uc=0.5):
 
     return A, B
 
-def crank(A, B, C, n, CFL, f_space=False, f_time = False, alfa=0.105):
-    C[:, n] = spsolve(A, B*C[:, n-1])
-    C[-1, n] = C[-1, n-1] - CFL*(C[-1, n-1] - C[-2, n-1])
-
-    # Filtro Robert-Asselin
-    C = filtro(C, alfa, f_space, f_time)
+def crank(A, B, C, F, t, dt, n, Nx, CFL, gamma, alfa, f_space=False, f_time = False):
+    F[101, n] =  1/2*(wave(t, n) + wave(t, n-1))
+    C[:, n+1] = spsolve(A, B*C[:, n]) + F[:,n]*dt
+    C[-1, n+1] = C[-1, n] + F[-1,n]*dt - CFL*(C[-1, n] - C[-2, n])
     
+    # Robert-Asselin-Williams filter
+    for i in range(1, Nx-1):
+        if f_time == True:
+            C[i,   n] = C[i, n  ] +     gamma*alfa/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+            C[i, n+1] = C[i, n+1] - gamma*(1-alfa)/2*(C[i, n+1] - 2*C[i, n] + C[i, n-1])
+            
+        if f_space == True:
+            C[i ,  n] = C[i,   n] +     gamma*alfa/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
+            C[i+1, n] = C[i+1, n] - gamma*(1-alfa)/2*(C[i+1, n] - 2*C[i, n] + C[i-1, n])
     return C
 
-def hovm(X,T,C_s, ylabel,name, n, dt, t, fonte=True, levels=[-1,-.1,0,.5,1,10,50, 150, 200]):
+def hovm(X,T,C_s, F, ylabel,name, n, dt, t, alfa, gamma, filtro=False, fonte=True, levels=[-1,-.1,0,.5,1,10,50, 150, 200]):
     colores = ['c','snow','w','bisque', 'peachpuff','orange', 'r', 'brown','k']
 
     if fonte == True:
         fig, ax = plt.subplots(1,2,figsize=(12,4), gridspec_kw={'wspace':.15})
-        im = ax[0].contourf(X/1000, T/3600, C_s, levels, origin='lower', extend='both',
+        im = ax[0].contourf(X/1000, T/3600, C_s, levels, origin='lower', # extend='both',
                             colors=colores)
         #im.cmap.set_under('w')
         #im.cmap.set_over('k')
         ax[0].set_ylabel("Tempo em horas")
         ax[0].set_xlabel("km")
+        if filtro == True:
+            ax.set_title(f"Diagrama Hovmoller, filtro (gamma={gamma}, alfa={alfa})", loc='left')
         ax[0].set_title(f"Diagrama Hovmoller", loc='left')
-        ax[1].set_ylabel(ylabel)
+        ax[1].set_ylabel(ylabel[1])
         ax[1].set_xlabel("Tempo (h)")
-        ax[1].set_title(f"Ponto j=100, t[{n}] = {round((n*dt/3600),1)} horas, $\Delta t$={dt} s", loc='left')
-        fig.colorbar(im, ax=ax[0],orientation="vertical",shrink=0.9) #fraction=0.04, pad=0.08
-        ax[1].plot(t/3600, C_s[100,:])
+        ax[1].set_title(f"Ponto j=101, t[{n}] = {round((n*dt/3600),1)} horas, $\Delta t$={dt} s", loc='left')
+        cbar = fig.colorbar(im, ax=ax[0],orientation="vertical") #fraction=0.04, pad=0.08 ,shrink=0.8
+        cbar.ax.set_title(ylabel[0], fontsize=8)
+        ax[1].plot(t/3600, F[101,:])
     else:
         fig, ax = plt.subplots(1,figsize=(6,4))
-        im = ax.contourf(X/1000, T/3600, C_s, levels, origin='lower', extend='both',
+        im = ax.contourf(X/1000, T/3600, C_s, levels, origin='lower', #extend='both',
                             colors=colores)
         #im.cmap.set_under('w')
         #im.cmap.set_over('k')
         ax.set_ylabel("Tempo em horas")
         ax.set_xlabel("km")
-        ax.set_title(f"Diagrama Hovmoller", loc='left')
-        fig.colorbar(im, ax=ax,orientation="vertical",shrink=0.9) #fraction=0.04, pad=0.08
+        if filtro == True:
+            ax.set_title(f"Diagrama Hovmoller, \n filtro (gamma={gamma}, alfa={alfa})", loc='left')
+        else:
+            ax.set_title(f"Diagrama Hovmoller", loc='left')
+        cbar = fig.colorbar(im, ax=ax,orientation="vertical") #fraction=0.04, pad=0.08
+        cbar.ax.set_title(ylabel[0], fontsize=8)
 
     fig.savefig("fig/"+name+".png", 
                 dpi = 400, bbox_inches='tight', facecolor='w')
