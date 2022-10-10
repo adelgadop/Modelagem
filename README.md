@@ -81,13 +81,13 @@ $\frac{\partial C}{\partial t} \rarr \frac{(C^{n+1} - C^{n-1})}{2 \Delta t} $
 
 Mantenha a CF radiacional do Ex 2. 
 
-- [ ] a. Resolva numericamente com o esquema Leapfrog na advecção e a difusão no tempo n-1, forcante no tempo n-1.
-- [ ] b. Introduza a forçante pelo método splitting
+- [x] a. Resolva numericamente com o esquema Leapfrog na advecção e a difusão no tempo n-1, forcante no tempo n-1.
+- [x] b. Introduza a forçante pelo método splitting
   - [ ] 1. Verifique experimentalmente o critério discutido em Doos et al. Figura 8.6  para a estabilidade numérica do esquema, através de variações do U e K (kapa) com F = 0
-  - [ ] 2.	Com o F do Problema 2, discuta o efeito do splitting. Ou seja, compare a solução com o F calculado no tempo n-1 com a solução em 2 passos. No primeiro passo  (\*) calcule somente o efeito da advecção e difusão e no segundo passo calcule a forçante com a estimativa  no primeiro passo (\*).
+  - [x] 2.	Com o F do Problema 2, discuta o efeito do splitting. Ou seja, compare a solução com o F calculado no tempo n-1 com a solução em 2 passos. No primeiro passo  (\*) calcule somente o efeito da advecção e difusão e no segundo passo calcule a forçante com a estimativa  no primeiro passo (\*).
 
 Apresente o exercício na forma de um paper, ou seja,  com uma 
-- [ ] introdução sobre o tema, 
+- [x] introdução sobre o tema, 
 - [ ] descrição da metodologia, 
 - [ ] resultados e 
 - [ ] discussão dos resultados.  Pode retirar toda a discussão teórica  sobre a advecção e forçante. Foque na difusão e na questão da forma de introduzir a forçante.
