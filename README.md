@@ -76,7 +76,7 @@ $\frac{\partial C}{\partial t} + U \frac{\partial C}{\partial x} = K \frac{\part
 
 Use a mesma fonte periódica do Ex 2, mesma malha no espaço e determine o K (kappa) de forma que o tempo de decaimento seja da ordem de 3 horas. Inicialmente coloque o F no tempo n. Faça o 
 
-$\frac{\partial C}{\partial t} \rarr \frac{(C^{n+1} - C^{n-1})}{2 \Delta t} $
+$\frac{\partial C}{\partial t} \rarr \frac{(C^{n+1} - C^{n-1})}{2 \Delta t}$
 
 Mantenha a CF radiacional do Ex 2. 
 
