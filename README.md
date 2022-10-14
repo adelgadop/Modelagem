@@ -82,7 +82,7 @@ Mantenha a CF radiacional do Ex 2.
 
 - [x] a. Resolva numericamente com o esquema Leapfrog na advecção e a difusão no tempo n-1, forcante no tempo n-1.
 - [x] b. Introduza a forçante pelo método splitting
-  - [ ] 1. Verifique experimentalmente o critério discutido em Doos et al. Figura 8.6  para a estabilidade numérica do esquema, através de variações do U e K (kapa) com F = 0
+  - [x] 1. Verifique experimentalmente o critério discutido em Doos et al. Figura 8.6  para a estabilidade numérica do esquema, através de variações do U e K (kappa) com F = 0
   - [x] 2. Com o F do Problema 2, discuta o efeito do splitting. Ou seja, compare a solução com o F calculado no tempo n-1 com a solução em 2 passos. No primeiro passo  (\*) calcule somente o efeito da advecção e difusão e no segundo passo calcule a forçante com a estimativa  no primeiro passo (\*).
 
 Apresente o exercício na forma de um paper, ou seja,  com uma 
