@@ -87,8 +87,8 @@ Mantenha a CF radiacional do Ex 2.
 
 Apresente o exercício na forma de um paper, ou seja,  com uma 
 - [x] introdução sobre o tema, 
-- [ ] descrição da metodologia, 
-- [ ] resultados e 
+- [x] descrição da metodologia, 
+- [x] resultados e 
 - [ ] discussão dos resultados.  Pode retirar toda a discussão teórica  sobre a advecção e forçante. Foque na difusão e na questão da forma de introduzir a forçante.
 
 
