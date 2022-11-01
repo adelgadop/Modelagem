@@ -124,7 +124,7 @@ e. E divirta-se...
 Faça o relatório do Ex. 4 na forma de artigo.
 
 
-![Agua Rasa, H=1 m, plano B](Exercicio_4/fig/leapfrog_1m_scen3.png)
+![Agua Rasa, H=50 m, plano B](Exercicio_4/gifs/leap_50m_scen3.gif)
 
 
 

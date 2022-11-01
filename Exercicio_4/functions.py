@@ -22,7 +22,7 @@ def conditions(scen, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
     X = np.transpose(X)                                   # To get plots right
     Y = np.transpose(Y)                                   # To get plots right
 
-    beta = np.zeros((Ny+1, 1))
+    beta = np.zeros((Ny+1))
     div = np.zeros((Nt+1,Nx+1,Ny+1))
     vor = np.zeros((Nt+1,Nx+1,Ny+1))
      
@@ -33,7 +33,7 @@ def conditions(scen, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
     h  = np.zeros((Nt+1, Nx+1, Ny+1))  # height variation by time
     Fu = np.zeros((Nt+1, Nx+1, Ny+1))  # Zonal force like ENSO
     
-    Fu[:,:,:] = np.exp(-X**2/(Nrx*4*dx)**2 - Y**2/(Nry*2*dy)**2) 
+    Fu[:,:,:] = np.exp(-X**2/(Nrx*2*dx)**2 - Y**2/(Nry*dy)**2) 
 
     q = 2*np.pi/86400      # angular velocity (2pi/24h) [1/s]
     f = np.zeros((Ny+1))
@@ -47,52 +47,75 @@ def conditions(scen, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
         beta[:] = 2*q*np.cos(np.deg2rad(lat_deg[:]))/a
         f[:]=beta[:]*Y[0,:]
             
-    return scen, x, y, X, Y, u, v, h, Fu, f, div, vor
+    return scen, x, y, X, Y, u, v, h, Fu, f, beta, div, vor
 
-def leapfrog(Nx, Ny, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, c, div, vor):
-    """_summary_
+def leapfrog(scen, Nx, Ny, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, c, div, vor):
+    """Leapfrog scheme to resolve shallow water equation 2D.
 
     Args:
-        Nx (int): _description_
-        Ny (int): _description_
-        Nt (int): _description_
-        u (array): _description_
-        v (array): _description_
-        h (array): _description_
-        g (float): _description_
-        dx (int): _description_
-        dy (int): _description_
-        dt (int): _description_
+        Nx (int): n° points in x axes
+        Ny (int): n° points in y axes
+        Nt (int): n° time steps
+        u (array): zonal wind vectors
+        v (array): meridional wind vectors
+        h (array): height 
+        g (float): gravitational acceleration
+        dx (int): spatial horizontal resolution at x
+        dy (int): spatial horizontal resolution at y 
+        dt (int): temporal resolution in seconds
         H (int): Mean height
         Fu (array): Constant source at zonal wind.
-        f (array): _description_
-        c (float): _description_
+        f (array): coriolis
+        c (float): sqrt(gH)
         div (array): Divergence
         vor (array): Vorticity
 
     Returns:
-        _type_: _description_
+        arrays: u, v, h, div, vort
     """
     for n in range(1, Nt):
-
-        if n == 1: # Euler-forward scheme
-            for i in range(1, Nx-1):
-                for j in range(1, Ny-1):
-                    u[n,i+1,j]= u[n-1,i+1,j] + dt*(-g*(h[n-1,i+2,j] - h[n-1,i+1,j])/dx + \
-                                f[j]/4*(v[n-1,i,j]+v[n-1,i+1,j]+v[n-1,i+1,j-1]+v[n-1,i,j-1]) + Fu[n,i,j]) 
-                    v[n,i,j+1]= v[n-1,i,j+1] + dt*(-g*(h[n-1,i,j+2] - h[n-1,i,j+1])/dy - \
-                                f[j]/4*(u[n-1,i,j]+u[n-1,i,j+1]+u[n-1,i-1,j+1]+u[n-1,i-1,j]))
-                    h[n,i,j]= h[n-1,i,j] - dt*H*((u[n-1,i,j]-u[n-1,i-1,j])/dx + (v[n-1,i,j]-v[n-1,i,j-1])/dy)
-                    
-        else: # Leap-frog scheme
-            for i in range(1, Nx-1):
-                for j in range(1, Ny-1):
-                    u[n+1,i+1,j]= u[n-1,i+1,j] + 2*dt*(-g*(h[n,i+2,j] - h[n,i+1,j])/dx + \
-                                f[j]/4*(v[n,i,j]+v[n,i+1,j]+v[n,i+1,j-1]+v[n,i,j-1]) + Fu[n,i,j])
-                    v[n+1,i,j+1]= v[n-1,i,j+1] + 2*dt*(-g*(h[n,i,j+2] - h[n,i,j+1])/dy - \
-                                f[j]/4*(u[n,i,j]+u[n,i,j+1]+u[n,i-1,j+1]+u[n,i-1,j]))
-                    h[n+1,i,j]= h[n-1,i,j] - 2*dt*H*((u[n,i,j]-u[n,i-1,j])/dx + (v[n,i,j]-v[n,i,j-1])/dy)
+        if (scen == 'scen1') | (scen == 'scen2'):
+            if n == 1: # Euler-forward scheme
+                for i in range(1, Nx-1):
+                    for j in range(1, Ny-1):
+                        u[n,i+1,j]= u[n-1,i+1,j] + dt*(-g*(h[n-1,i+2,j] - h[n-1,i+1,j])/dx + \
+                                    f[j]/4*(v[n-1,i,j]+v[n-1,i+1,j]+v[n-1,i+1,j-1]+v[n-1,i,j-1]) + Fu[n,i,j]) 
+                        v[n,i,j+1]= v[n-1,i,j+1] + dt*(-g*(h[n-1,i,j+2] - h[n-1,i,j+1])/dy - \
+                                    f[j]/4*(u[n-1,i,j]+u[n-1,i,j+1]+u[n-1,i-1,j+1]+u[n-1,i-1,j]))
+                        h[n,i,j]= h[n-1,i,j] - dt*H*((u[n-1,i,j]-u[n-1,i-1,j])/dx + (v[n-1,i,j]-v[n-1,i,j-1])/dy)
+                        
+            else: # Leap-frog scheme
+                for i in range(1, Nx-1):
+                    for j in range(1, Ny-1):
+                        u[n+1,i+1,j]= u[n-1,i+1,j] + 2*dt*(-g*(h[n,i+2,j] - h[n,i+1,j])/dx + \
+                                    f[j]/4*(v[n,i,j]+v[n,i+1,j]+v[n,i+1,j-1]+v[n,i,j-1]) + Fu[n,i,j])
+                        v[n+1,i,j+1]= v[n-1,i,j+1] + 2*dt*(-g*(h[n,i,j+2] - h[n,i,j+1])/dy - \
+                                    f[j]/4*(u[n,i,j]+u[n,i,j+1]+u[n,i-1,j+1]+u[n,i-1,j]))
+                        h[n+1,i,j]= h[n-1,i,j] - 2*dt*H*((u[n,i,j]-u[n,i-1,j])/dx + (v[n,i,j]-v[n,i,j-1])/dy)
         
+        elif scen == 'scen3': # Beta 
+            if n == 1: # Euler-forward scheme
+                for i in range(1, Nx-1):
+                    for j in range(1, Ny-1):
+                        u[n,i+1,j]= u[n-1,i+1,j] + dt*(-g*(h[n-1,i+2,j] - h[n-1,i+1,j])/dx + \
+                                    beta[j]/4*(y[j]*v[n-1,i,j]*(v[n-1,i,j]+v[n-1,i+1,j]) + \
+                                        y[j-1]*v[n-1,i+1,j-1]*(v[n-1,i+1,j-1]+v[n-1,i,j-1])) + Fu[n,i,j]) 
+                        v[n,i,j+1]= v[n-1,i,j+1] + dt*(-g*(h[n-1,i,j+2] - h[n-1,i,j+1])/dy - \
+                                    beta[j]/4*(y[j]*u[n-1,i,j]*h[n-1,i,j]*(u[n-1,i,j]+u[n-1,i-1,j]) + \
+                                        y[j+1]*u[n-1,i,j+1]*h[n-1,i,j+1]*(u[n-1,i,j+1]+u[n-1,i-1,j+1])))
+                        h[n,i,j]= h[n-1,i,j] - dt*H*((u[n-1,i,j]-u[n-1,i-1,j])/dx + (v[n-1,i,j]-v[n-1,i,j-1])/dy)
+                        
+            else: # Leap-frog scheme
+                for i in range(1, Nx-1):
+                    for j in range(1, Ny-1):
+                        u[n+1,i+1,j]= u[n-1,i+1,j] + 2*dt*(-g*(h[n,i+2,j] - h[n,i+1,j])/dx + \
+                                    beta[j]/4*(y[j]*v[n-1,i,j]*(v[n-1,i,j]+v[n-1,i+1,j]) + \
+                                        y[j-1]*v[n-1,i+1,j-1]*(v[n-1,i+1,j-1]+v[n-1,i,j-1])) + Fu[n,i,j])
+                        v[n+1,i,j+1]= v[n-1,i,j+1] + 2*dt*(-g*(h[n,i,j+2] - h[n,i,j+1])/dy - \
+                                    beta[j]/4*(y[j]*u[n-1,i,j]*h[n-1,i,j]*(u[n-1,i,j]+u[n-1,i-1,j]) + \
+                                        y[j+1]*u[n-1,i,j+1]*h[n-1,i,j+1]*(u[n-1,i,j+1]+u[n-1,i-1,j+1])))
+                        h[n+1,i,j]= h[n-1,i,j] - 2*dt*H*((u[n,i,j]-u[n,i-1,j])/dx + (v[n,i,j]-v[n,i,j-1])/dy)
+                        
         # Radiational as boundary condition (west, north, south)
         # ------------------------------------------------------
         # west
