@@ -3,7 +3,7 @@ Entrega do trabalho  + apresentações nos dias 28/10/2022
 
 ---
 
-![Agua Rasa, H=50 m, plano B](Exercicio_4/gifs/leap_50m_scen3.gif)
+![Agua Rasa, H=50 m, plano B](gifs/leap_50m_scen3.gif)
 
 O modelo de água rasa é usado na modelagem atmosférica e oceanográfica para uma enorme variedade de problemas.  Na atmosfera, por ex., uma fonte de calor na atmosfera (por exemplo, um furacão) pode ser vista como uma fonte de massa no modelo de água rasa.  No oceano, o gatilho para formação do ENSO pode ser representado por uma transferência de momentum na componente zonal do vento da região equatorial, representativa do efeito de um transiente na intensidade dos ventos alísios.  Como esses problemas são altamente dependentes da capacidade do modelo descrever o processo de dispersão de energia, vamos fazer simulações com o modelo de água rasa 2D:
 
