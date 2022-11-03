@@ -1,4 +1,4 @@
-
+*.gif
 .D*
 .i*
 __pycache__
