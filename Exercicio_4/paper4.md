@@ -25,8 +25,7 @@ eqnPrefix:
 csl: "https://raw.githubusercontent.com/citation-style-language/styles/master/aerosol-and-air-quality-research.csl"
 abstract: 
     Neste trabalho .
-...
-
+---
 
 # 1. Introdução
 O modelo de água rasa considera equações para representar o ajuste geostrófico para o deslocamento das ondas de gravidade e inerciais considerando as propriedades conservativas de momentum e massa [@Randall2021]. O modelo é importante para representar fenômenos atmosféricos ou oceanográficos. Nos estudos de qualidade do ar pode representar a variação da camada de mistura ao longo do dia que impacta na concentração dos poluentes. O modelo também tem aplicações oceanográficas onde a força zonal dos ventos pode afetar o deslocamento das correntes como propagação de ondas com variação da altura do fluído, como é ilustrado na @Fig:1. Conforme com @Doos2020, as ondas de gravidade no modelo 1D pode-se propagar ao longo do eixo x em ambas direções com uma velocidade $c=\sqrt{gH}$ sem depender do número de onda pelo que é considerado não dispersivo; onde $g$ é a aceleração da gravidade e $H$ a altura média do fluído.
@@ -71,15 +70,24 @@ Para as condições de fronteira no caso da grade C tipo Arakawa os componentes 
 Finalmente, a formulação do modelo preserva as propriedades conservativas e asseguram a estabilidade computacional do modelo. A conservação da massa ajuda em manter a pressão superficial dentro dos valores esperados realistas [@Doos2020].
 
 # 2. Descrição da metodologia
-O exercício considera três condições com variação do parâmetro Coriolis (f=0, f=$f_0$ na latitude 20°S e f=$\beta$y para o plano beta equatorial). A opção de fonte escolhida é de tipo oceanográfico de momentum zonal constante, com gaussiana centrada no equador e alongada na direção zonal, resolução espacial horizontal de $\Delta x = \Delta y = 100$ km (@Fig:3). As condições de fronteira escolhidas são radiacional no oeste, norte e sul, e uma condição de fronteira rígida na fronteira leste. As variáveis escolhidas de $H$ foram três: 1 m, 250 m e 50 m. Depois da integração numérica com o esquema leap-frog foi verificado a conservação de massa e de energia. Finalmente, foram gerados mapas de divergência e vorticidade.
+O exercício considera três condições com variação do parâmetro Coriolis (f=0, f=$f_0$ na latitude 20°S e f=$\beta$y para o plano beta equatorial). A opção de fonte escolhida é de tipo oceanográfico de momentum zonal constante com ventos de leste, com gaussiana centrada no equador e alongada na direção zonal (@Fig:3). Ela representa o processo de formação do El Niño-Southern Oscillation (ENSO), pelo que a fonte de momentum é negativa para representar ventos do leste, no jeito similar com o ilustrado na @Fig:4.
+As condições de fronteira escolhidas são radiacional no oeste, norte e sul, e uma condição de fronteira rígida na fronteira leste. As variáveis escolhidas de $H$ foram três: 1 m, 250 m e 50 m. A resolução espacial horizontal é de $\Delta x = \Delta y = 100$ km. Depois da integração numérica com o esquema leap-frog foi verificado a conservação de massa e de energia. Finalmente, foram gerados mapas de divergência e vorticidade.
 
-![Fonte de momentum zonal $F_u$ para Nrx=10 e Nry=4.](fig/fonte_u.png){#fig:3}
+![Fonte de momentum zonal $F_u$ com sinal negativo, com alongamento de pontos de Nrx=10 e Nry=4.](fig/fonte_u.png){#fig:3}
+
+![Representação do ciclo ENSO (anos 1997-1998, acima) para a temperatura superficial do mar e ventos de superfície comparado com novembro-abril de período frio (1998-1999, abaixo). Figura extraída de @Wallace2006.](fig/ENSO_alisios.png){#fig:4}
+
 
 Em geral, conforme com as sugestões de @Doos2020, primeiro as condições iniciais foram estabelecidas para $n=0$ para todos os indices $i$ e $j$ numa grade tipo C: $u^{n=0}_{i+1,j}$ = 0, $v^{n=0}_{i,j+1}$ = 0, $h^{n=0}_{i,j}$ = 0. Depois, a integração das equações do modelo de água rasa considerou o esquema *Euler-forward* para o primeiro passo de tempo ($n=1$). Os seguintes passos de tempo seguiram com uma integração das equações com o esquema leap-frog. A programação da discretização das equações foi escrita em código de Python, disponível no GitHub "Modelagem", Exercício 4, [functions.py](https://github.com/adelgadop/Modelagem/blob/main/Exercicio_4/functions.py).
 
 # 3. Resultados
+Os resultados de variação de 'h' e os ventos para o caso da fonte de momentum zonal constante (vento forçante de leste, como mostra a @Fig:3) são mostrados na @Fig:5 para diferentes valores de Coriolis (f = 0, f constante para a latitude 20°S e variação de f no plano beta equatorial). Podemos notar diferenças pequenas entre elas como mostra a @Fig:6. Os mapas de divergência e vorticidade são apresentados na @Fig:7. 
 
+![Variação de h com fonte de momentum zonal para diferentes valores de Coriolis](fig/leapfrog_250m_cenarios.png){#fig:5}
 
+![Diferenças entre cada valor de Coriolis com o esquema leapfrog. scen1: f=0; scen2: f em 20°S; scen3: variação de f no plano beta equatorial.](fig/leapfrog_250m_dif.png){#fig:6}
+
+![Mapas da divergência e vorticidade para o cenário 3 (scen3) com variação de Coriolis no plano beta equatorial.](fig/leapfrog_div_vor250m_scen3.png){#fig:7}
 
 # 4. Discussão dos resultados
 
@@ -87,6 +95,4 @@ Em geral, conforme com as sugestões de @Doos2020, primeiro as condições inici
 # Bibliografia
 <div id="refs"></div>
 
-# Apêndice A
-O código escrito em Python começou com resolver todo sem o operador...
 

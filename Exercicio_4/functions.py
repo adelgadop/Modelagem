@@ -23,8 +23,8 @@ def conditions(scen, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
     Y = np.transpose(Y)                                   # To get plots right
 
     beta = np.zeros((Ny+1))
-    div = np.zeros((Nt+1,Nx+1,Ny+1))
-    vor = np.zeros((Nt+1,Nx+1,Ny+1))
+    div  = np.zeros((Nt+1,Nx+1,Ny+1))
+    vor  = np.zeros((Nt+1,Nx+1,Ny+1))
      
     # Allocating arrays and initial conditions as Arakawa C-grid
     # ----------------------------------------------------------
@@ -33,7 +33,14 @@ def conditions(scen, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
     h  = np.zeros((Nt+1, Nx+1, Ny+1))  # height variation by time
     Fu = np.zeros((Nt+1, Nx+1, Ny+1))  # Zonal force like ENSO
     
-    Fu[:,:,:] = np.exp(-X**2/(Nrx*2*dx)**2 - Y**2/(Nry*dy)**2) 
+    fonte_u = -np.exp(-X**2/(Nrx*2*dx)**2 - Y**2/(Nry*dy)**2)
+    Fu[:,:,:] =  fonte_u
+    
+    # Initial conditions for u, v, & h
+    # --------------------------------
+    u[0, :, :] = 0.
+    v[0, :, :] = 0.
+    h[0, :, :] = 0.
 
     q = 2*np.pi/86400      # angular velocity (2pi/24h) [1/s]
     f = np.zeros((Ny+1))
@@ -71,63 +78,69 @@ def leapfrog(scen, Nx, Ny, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, c, div
         vor (array): Vorticity
 
     Returns:
-        arrays: u, v, h, div, vort
+        arrays: u, v, h, div, vor
     """
     for n in range(1, Nt):
         if (scen == 'scen1') | (scen == 'scen2'):
             if n == 1: # Euler-forward scheme
-                for i in range(1, Nx-1):
-                    for j in range(1, Ny-1):
-                        u[n,i+1,j]= u[n-1,i+1,j] + dt*(-g*(h[n-1,i+2,j] - h[n-1,i+1,j])/dx + \
-                                    f[j]/4*(v[n-1,i,j]+v[n-1,i+1,j]+v[n-1,i+1,j-1]+v[n-1,i,j-1]) + Fu[n,i,j]) 
-                        v[n,i,j+1]= v[n-1,i,j+1] + dt*(-g*(h[n-1,i,j+2] - h[n-1,i,j+1])/dy - \
-                                    f[j]/4*(u[n-1,i,j]+u[n-1,i,j+1]+u[n-1,i-1,j+1]+u[n-1,i-1,j]))
-                        h[n,i,j]= h[n-1,i,j] - dt*H*((u[n-1,i,j]-u[n-1,i-1,j])/dx + (v[n-1,i,j]-v[n-1,i,j-1])/dy)
+                for i in range(1, Nx):
+                    for j in range(1, Ny):
+                        u[1,i,j]= u[0,i,j] + dt*(-g*(h[0,i+1,j] - h[0,i,j])/dx + \
+                                    f[j]/4*(v[0,i,j] + v[0,i+1,j] + v[0,i+1,j-1] + v[0,i,j-1]) + Fu[n,i,j]) # ok
+                        
+                        v[1,i,j]= v[0,i,j] + dt*(-g*(h[0,i,j+1] - h[0,i,j])/dy - \
+                                    f[j]/4*(u[0,i,j] + u[0,i,j+1] + u[0,i-1,j+1] + u[0,i-1,j])) # ok
+                        
+                        h[1,i,j]= h[0,i,j] - dt*H*((u[0,i,j] - u[0,i-1,j])/dx + (v[0,i,j] - v[0,i,j-1])/dy) #ok
                         
             else: # Leap-frog scheme
-                for i in range(1, Nx-1):
-                    for j in range(1, Ny-1):
-                        u[n+1,i+1,j]= u[n-1,i+1,j] + 2*dt*(-g*(h[n,i+2,j] - h[n,i+1,j])/dx + \
-                                    f[j]/4*(v[n,i,j]+v[n,i+1,j]+v[n,i+1,j-1]+v[n,i,j-1]) + Fu[n,i,j])
-                        v[n+1,i,j+1]= v[n-1,i,j+1] + 2*dt*(-g*(h[n,i,j+2] - h[n,i,j+1])/dy - \
-                                    f[j]/4*(u[n,i,j]+u[n,i,j+1]+u[n,i-1,j+1]+u[n,i-1,j]))
-                        h[n+1,i,j]= h[n-1,i,j] - 2*dt*H*((u[n,i,j]-u[n,i-1,j])/dx + (v[n,i,j]-v[n,i,j-1])/dy)
-        
+                for i in range(1, Nx):
+                    for j in range(1, Ny):
+                        u[n+1,i,j]= u[n-1,i,j] + 2*dt*(-g*(h[n,i+1,j] - h[n,i,j])/dx + \
+                                    f[j]/4*(v[n,i,j] + v[n,i+1,j] + v[n,i+1,j-1] + v[n,i,j-1]) + Fu[n,i,j]) #ok
+                        v[n+1,i,j]= v[n-1,i,j] + 2*dt*(-g*(h[n,i,j+1] - h[n,i,j])/dy - \
+                                    f[j]/4*(u[n,i,j] + u[n,i,j+1] + u[n,i-1,j+1] + u[n,i-1,j]))
+                        h[n+1,i,j]= h[n-1,i,j] - 2*dt*H*((u[n,i,j] - u[n,i-1,j])/dx + (v[n,i,j] - v[n,i,j-1])/dy)
+                               
         elif scen == 'scen3': # Beta 
             if n == 1: # Euler-forward scheme
-                for i in range(1, Nx-1):
-                    for j in range(1, Ny-1):
-                        u[n,i+1,j]= u[n-1,i+1,j] + dt*(-g*(h[n-1,i+2,j] - h[n-1,i+1,j])/dx + \
+                for i in range(1, Nx):
+                    for j in range(1, Ny):
+                        u[n,i,j]= u[n-1,i,j] + dt*(-g*(h[n-1,i+1,j] - h[n-1,i,j])/dx + \
                                     beta[j]/4*(y[j]*v[n-1,i,j]*(v[n-1,i,j]+v[n-1,i+1,j]) + \
                                         y[j-1]*v[n-1,i+1,j-1]*(v[n-1,i+1,j-1]+v[n-1,i,j-1])) + Fu[n,i,j]) 
-                        v[n,i,j+1]= v[n-1,i,j+1] + dt*(-g*(h[n-1,i,j+2] - h[n-1,i,j+1])/dy - \
+                        v[n,i,j]= v[n-1,i,j] + dt*(-g*(h[n-1,i,j+1] - h[n-1,i,j])/dy - \
                                     beta[j]/4*(y[j]*u[n-1,i,j]*h[n-1,i,j]*(u[n-1,i,j]+u[n-1,i-1,j]) + \
                                         y[j+1]*u[n-1,i,j+1]*h[n-1,i,j+1]*(u[n-1,i,j+1]+u[n-1,i-1,j+1])))
-                        h[n,i,j]= h[n-1,i,j] - dt*H*((u[n-1,i,j]-u[n-1,i-1,j])/dx + (v[n-1,i,j]-v[n-1,i,j-1])/dy)
+                        h[n,i,j]= h[n-1,i,j] - dt*H*((u[n-1,i,j]-u[n-1,i-1,j])/dx + (v[n-1,i,j]-v[n-1,i,j-1])/dy) 
                         
             else: # Leap-frog scheme
-                for i in range(1, Nx-1):
-                    for j in range(1, Ny-1):
-                        u[n+1,i+1,j]= u[n-1,i+1,j] + 2*dt*(-g*(h[n,i+2,j] - h[n,i+1,j])/dx + \
-                                    beta[j]/4*(y[j]*v[n-1,i,j]*(v[n-1,i,j]+v[n-1,i+1,j]) + \
-                                        y[j-1]*v[n-1,i+1,j-1]*(v[n-1,i+1,j-1]+v[n-1,i,j-1])) + Fu[n,i,j])
-                        v[n+1,i,j+1]= v[n-1,i,j+1] + 2*dt*(-g*(h[n,i,j+2] - h[n,i,j+1])/dy - \
-                                    beta[j]/4*(y[j]*u[n-1,i,j]*h[n-1,i,j]*(u[n-1,i,j]+u[n-1,i-1,j]) + \
-                                        y[j+1]*u[n-1,i,j+1]*h[n-1,i,j+1]*(u[n-1,i,j+1]+u[n-1,i-1,j+1])))
+                for i in range(1, Nx):
+                    for j in range(1, Ny):
+                        u[n+1,i,j]= u[n-1,i,j] + 2*dt*(-g*(h[n,i+1,j] - h[n,i,j])/dx + \
+                                      beta[j]/4*(y[j]*v[n,i,j]*(v[n,i,j]+v[n,i+1,j]) + \
+                                        y[j-1]*v[n,i+1,j-1]*(v[n,i+1,j-1]+v[n,i,j-1])) + Fu[n,i,j])
+                        v[n+1,i,j]= v[n-1,i,j] + 2*dt*(-g*(h[n,i,j+1] - h[n,i,j])/dy - \
+                                    beta[j]/4*(y[j]*u[n,i,j]*h[n,i,j]*(u[n,i,j]+u[n,i-1,j]) + \
+                                        y[j+1]*u[n,i,j+1]*h[n,i,j+1]*(u[n,i,j+1]+u[n,i-1,j+1])))
                         h[n+1,i,j]= h[n-1,i,j] - 2*dt*H*((u[n,i,j]-u[n,i-1,j])/dx + (v[n,i,j]-v[n,i,j-1])/dy)
                         
         # Radiational as boundary condition (west, north, south)
         # ------------------------------------------------------
         # west
-        u[n+1,0,:]= u[n,0,:] + dt*(f[:]*(v[n,0,1:]+v[n,0,:-1])/2 + c*(u[n,1,:]-u[n,0,:])/dx)
+        u[n+1,0,:] = u[n,0,:] + dt*(f[:]*(v[n,0,1:]+v[n,0,:-1])/2 + c*(u[n,1,:]-u[n,0,:])/dx)
+        #u[n+1,0,:] = 0
+        
         # north
-        v[n+1,:,-1]= v[n,:,-1] - dt*(f[-1]*(u[n,1:,-1] + u[n,:-1,-1])/2 + c*(v[n,:,-2]-v[n,:,-1]/dy))
+        v[n+1,:,-1] = v[n,:,-1] - dt*(f[-1]*(u[n,1:,-1] + u[n,:-1,-1])/2 + c*(v[n,:,-1]-v[n,:,-2])/dy)
+        #v[n+1,:,-1] = 0
+        
         # south
-        v[n+1,:,0]= v[n,:,0] - dt*(f[-1]*(u[n,1:,0]+ u[n,:-1,0])/2 + c*(v[n,:,1]-v[n,:,0]/dy))
+        v[n+1,:,0] = v[n,:,0] - dt*(f[-1]*(u[n,1:,0]+ u[n,:-1,0])/2 - c*(v[n,:,1]- v[n,:,0])/dy)
+        #v[n+1,:,0] = 0
         
         # Fixed boundary condition at east
-        u[n,-2::,:] =  0
-        h[n,-2::,:] =  5
+        u[n+1,-1,:] =  0
     
     # Divergence (du/dx + dv/dy)
     # -------------------------
