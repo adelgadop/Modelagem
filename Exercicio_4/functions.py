@@ -43,14 +43,14 @@ def conditions(scen, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
     h  = np.zeros((Nt+1, Nx+1, Ny+1))  # height variation by time
     Fu = np.zeros((Nt+1, Nx+1, Ny+1))  # Zonal force like ENSO
     
-    fonte_u = -np.exp(-X**2/(Nrx*dx)**2 - Y**2/(Nry*dy)**2)
-    Fu[:,:,:] =  fonte_u  # constante no tempo
+    fonte_u = -np.exp(-X**2/(Nrx*dx)**2 - Y**2/(Nry*dy)**2)/1000
+    Fu[:,:,:] = fonte_u  # constante no tempo
     
     # Initial conditions for u, v, & h
     # --------------------------------
     u[0, :, :] = 0.
     v[0, :, :] = 0.
-    #h[0, 40, 40] = 0 #fonte_u*-20
+    #h[0, 40, 40] = 80 #fonte_u*-20
 
     q = 2*np.pi/86400      # angular velocity (2pi/(24*3600 s)) [1/s]
     f = np.zeros((Ny+2))
@@ -62,8 +62,8 @@ def conditions(scen, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
     elif scen == 'scen2':
         f[:] = 2*q*np.sin(np.deg2rad(lat))
     elif scen == 'scen3':
-        lat_deg = yv/110    # y in km to degrees
-        beta[:] = 2*q*np.cos(np.deg2rad(lat_deg[:]))/a
+        #lat_deg = yv/111139    # yv in m to degrees (111139 m ~ 1 deg)
+        beta[:] = 2*q*np.cos(np.deg2rad(0))/a # plano beta equatorial
             
     return scen, x, y, yv, X, Y, u, v, h, Fu, f, beta, div, vor
 
