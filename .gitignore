@@ -1,4 +1,5 @@
 *.gif
+old/
 .D*
 .i*
 __pycache__
