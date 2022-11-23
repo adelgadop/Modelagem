@@ -49,7 +49,7 @@ def plot_gridC(Nx, Ny):
         
     return y, yv, Xu, Yu, Xv, Yv, Xh, Yh, dx, dy
     
-def conditions(scen, Xu, Yu, Xh, Yh, yv, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
+def conditions(scen, Xu, Yu, Xh, Yh, yv, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry, test=False):
     """Coriolis parameter
     Args:
         scen (character): scenario name (scen1 = 0, scen2 = f cte, scen3 = beta variation)
@@ -69,13 +69,22 @@ def conditions(scen, Xu, Yu, Xh, Yh, yv, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
     v  = np.zeros((Nt+1, Nx+1, Ny+2))  # meridional wind
     h  = np.zeros((Nt+1, Nx+1, Ny+1))  # height variation by time
     Fu = np.zeros((Nt+1, Nx+2, Ny+1))  # Zonal force like ENSO
-    Fu[:,:,:] = -np.exp(-Xu**2/(Nrx*dx)**2 - Yu**2/(Nry*dy)**2)/(24*3600)
     
-    # Initial conditions for u, v, & h
-    # --------------------------------
-    u[0, :, :] = Fu[0,:,:]
-    v[0, :, :] = 0
-    h[0, :, :] = 0 #40*np.exp(-Xh**2/(Nrx*dx)**2 - Yh**2/(Nry*dy)**2)
+    if test == False:
+        Fu[:,:,:] = -np.exp(-Xu**2/(Nrx*dx)**2 - Yu**2/(Nry*dy)**2)/(24*3600)
+    
+        # Initial conditions for u, v, & h
+        # --------------------------------
+        u[0, :, :] = Fu[0,:,:]
+        v[0, :, :] = 0
+        h[0, :, :] = 0 #40*np.exp(-Xh**2/(Nrx*dx)**2 - Yh**2/(Nry*dy)**2)
+        
+    else:
+        # Initial conditions for u, v, & h
+        # --------------------------------
+        u[0, :, :] = 0
+        v[0, :, :] = 0
+        h[0, :, :] = 10*np.exp(-Xh**2/(3*dx)**2 - Yh**2/(3*dy)**2)
 
     q = 2*np.pi/86400      # angular velocity (2pi/(24*3600 s)) [1/s]
     f = np.zeros((Ny+2))
@@ -92,7 +101,6 @@ def conditions(scen, Xu, Yu, Xh, Yh, yv, lat, Nx, Ny, dx, dy, Nt, Nrx, Nry):
         beta = 2*q*np.cos(np.deg2rad(lat_deg))/a # plano beta equatorial
             
     return u, v, h, Fu, f, beta, div, vor
-
 
 def leapfrog(scen, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, yv, c, div, vor, rad):
     """Leapfrog scheme to resolve shallow water equation 2D.
@@ -119,9 +127,11 @@ def leapfrog(scen, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, yv, c, div, vo
     Returns:
         arrays: u, v, h, div, vor
     """
-    for n in range(1, Nt):
+    for n in range(0, Nt):
         if (scen == 'scen1') | (scen == 'scen2'):
+                           
             if n == 1: # Euler-forward scheme
+                
                 u[1, 1:-1, :] = (u[0, 1:-1, :] +                               # u(i,j)            (80, 81) pontos
                                  dt*(-g*(h[0, 1:, :] - h[0, :-1, :])/dx +      # h(i+1,j) - h(i,j) 
                                      f/4*(v[0, :-1, 1:] +                      # v(i  , j  )           
@@ -144,7 +154,7 @@ def leapfrog(scen, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, yv, c, div, vo
                                       (v[0, :, 1:] -                           # v(i, j)     
                                        v[0, :,:-1])/dy )) #ok                  # v(i, j-1)   
                         
-            else: # Leap-frog scheme
+            elif n > 1: # Leap-frog scheme
                 u[n+1, 1:-1, :] = (u[n-1, 1:-1, :] +                           # u(i, j)           (80, 81) pontos
                                    2*dt*(-g*(h[n, 1:, :] - h[n, :-1, :])/dx +  # h(i+1,j) - h(i,j) 
                                          f/4*(v[n,:-1, 1:] +                   # v(i  , j  )          
@@ -172,36 +182,40 @@ def leapfrog(scen, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, yv, c, div, vo
             if rad == True:
                 # west (left) -> du/dt - fv - c*du/dx = 0
                 u[n+1, 0, :] = (u[n, 0, :] + 
-                                dt*f*(v[n, 0, 1:] + v[n, 0, :-1])/2 + 
-                                c*dt/dx*(u[n, 1, :] - u[n, 0, :]))
+                                dt*f*(v[n, 0, 1: ] + 
+                                      v[n, 0, :-1])/2 + 
+                                c*dt/dx * (u[n, 1, :] - u[n, 0, :]))
                 
                 # East (right) -> du/dt - fv + c*du/dx = 0
                 u[n+1, -1, :]  = 0
                 
                 # North -> dv/dt + fu + c*dv/dy = 0
-                v[n+1,:,-1] = (v[n, :, -1] - 
-                                dt*f*(u[n, 1:, -1] + u[n, :-1, -1])/2 - 
-                                c*dt/dy*(v[n, :, -1] - v[n, :, -2]))
+                v[n+1, :, -1] = (v[n, :, -1] - 
+                                 dt*f*(u[n, 1:, -1] + 
+                                       u[n, :-1, -1])/2 - 
+                                 c*dt/dy * (v[n, :, -1] - v[n, :, -2]))
 
                 # South -> dv/dt + fu - c*dv/dy = 0
                 v[n+1, :, 0] = (v[n, :, 0] - 
-                                dt*f*(u[n, 1:, 0]+ u[n, :-1, 0])/2 + 
-                                c*dt/dy*(v[n, :, 1] - v[n, :, 0]))
+                                dt*f*(u[n, 1:, 0] + 
+                                      u[n, :-1, 0])/2 + 
+                                c*dt/dy * (v[n, :, 1] - v[n, :, 0]))
             
             else:
-                u[n,0,:]  = 0  # west
-                v[n,:,-1] = 0  # north
-                v[n,:,0]  = 0  # south
-                u[n,-1,:] = 0  # east          
+                u[n+1, 0, :] = 0  # west
+                v[n+1, :,-1] = 0  # north
+                v[n+1, :, 0] = 0  # south
+                u[n+1,-1, :] = 0  # east                    
                                                      
-        elif scen == 'scen3': # Beta with two "y" (y and yv for C-grid Arakawa)
+        elif scen == 'scen3': # Beta with two "y" (y and yv for C-grid Arakawa)         
+            
             if n == 1: # Euler-forward scheme
-                u[1, 1:-1, :] = (u[0, 1:-1, :] +                              # u(i, j)              (80, 81) pontos
-                                 dt*(-g*(h[0, 1:, :] - h[0, :-1, :])/dx +     # h(i+1,j) - h(i,j)    
-                                     beta/4*(yv[1:]*(v[0,:-1, 1:] +           # yv(j)*[v(i,j) +      
-                                                     v[0, 1:, 1:]) +          # v(i+1,j)]      
-                                             yv[:-1]*(v[0, 1:,:-1] +          # yv[j-1]*[v[i+1,j-1]+ 
-                                                      v[0,:-1,:-1])) +        # v[i,j-1]             
+                u[1, 1:-1, :] = (u[0, 1:-1, :] +                               # u(i, j)             (80, 81) pontos
+                                 dt*(-g*(h[0, 1:, :] - h[0, :-1, :])/dx +      # h(i+1,j) - h(i,j)    
+                                     beta/4*(yv[1:]*(v[0,:-1, 1:] +            # yv(j)*[v(i,j) +      
+                                                     v[0, 1:, 1:]) +           # v(i+1,j)]      
+                                             yv[:-1]*(v[0, 1:,:-1] +           # yv[j-1]*[v[i+1,j-1]+ 
+                                                      v[0,:-1,:-1])) +         # v[i,j-1]             
                                      Fu[0,1:-1,:])) # ok
                 
                 v[1, :, 1:-1] = (v[0, :, 1:-1] +                               # v(i,j)              (81, 80) pontos
@@ -218,8 +232,8 @@ def leapfrog(scen, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, yv, c, div, vo
                                     (v[0, :, 1:] -                             # v(i, j)     
                                      v[0, :,:-1])/dy )) #ok                    # v(i, j-1)   
                         
-            else: # Leap-frog scheme               
-                u[n+1, 1:-1, :] = (u[n-1, 1:-1, :] +                           # u(i, j)          (80, 81) pontos
+            elif n > 1: # Leap-frog scheme               
+                u[n+1, 1:-1, :] = (u[n-1, 1:-1, :] +                           # u(i, j)             (80, 81) pontos
                                    2*dt*(-g*(h[n, 1:, :] - h[n, :-1, :])/dx +  # h(i+1,j) - h(i,j)    
                                          beta/4*(yv[1:]*(v[n,:-1, 1:] +        # yv(j)*[v(i,j) +      
                                                          v[n, 1:, 1:]) +       # v(i+1,j)]    
@@ -227,7 +241,7 @@ def leapfrog(scen, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, yv, c, div, vo
                                                           v[n,:-1,:-1])) +     # v[i,j-1] 
                                          Fu[n,1:-1,:])) # ok
                 
-                v[n+1, :, 1:-1] = (v[n-1, :, 1:-1] +                           # v(i,j)          (81, 80) pontos
+                v[n+1, :, 1:-1] = (v[n-1, :, 1:-1] +                           # v(i,j)              (81, 80) pontos
                                    2*dt*(-g*(h[n, :, 1:] - h[n, :, :-1])/dy -  # h(i,j+1) - h(i,j) 
                                          beta/4*(y[:-1]*(u[n, 1:, :-1] +       # y[j]*[u[i,j] + 
                                                          u[n,:-1, :-1]) +      # u(i-1,j)          
@@ -245,39 +259,61 @@ def leapfrog(scen, Nt, u, v, h, g, dx, dy, dt, H, Fu, f, beta, y, yv, c, div, vo
             # -----------------------------------------------------------
             if rad == True:
                 # west (left) -> du/dt - fv - c*du/dx = 0
-                u[n+1,0,:] = (u[n,0,:] +
-                                dt*(beta*yv[1:]*v[n,0,1:] + 
-                                    beta*yv[:-1]*v[n,0,:-1])/2 +
-                                c*dt/dx*(u[n, 1, :] - u[n, 0, :]))
+                u[n+1, 0, :] = (u[n, 0, :] +
+                                dt*beta*(yv[1: ] * v[n, 0, 1: ] + 
+                                         yv[:-1] * v[n, 0, :-1])/2 +
+                                c*dt/dx * (u[n, 1, :] - u[n, 0, :]))
                 
                 # East (right) -> du/dt - fv + c*du/dx = 0
-                u[n+1,-1,:]  = 0
+                u[n+1, -1, :]  = 0
                 
                 # North -> dv/dt + fu + c*dv/dy = 0
-                v[n+1,:,-1] = (v[n,:,-1] - 
-                                dt*beta*y[-1]*(u[n,1:,-1] + 
-                                               u[n,:-1,-1])/2 - 
-                                c*dt/dy*(v[n,:,-1] - v[n,:,-2]))
+                v[n+1, :, -1] = (v[n, :, -1] -
+                                 dt*beta*y[-1]*(u[n, 1: , -1] + 
+                                                u[n, :-1, -1])/2 - 
+                                 c*dt/dy * (v[n, :, -1] - v[n, :, -2]))
 
                 # South -> dv/dt + fu - c*dv/dy = 0
-                v[n+1,:,0] = (v[n,:,0] - 
-                                dt*beta*y[0]*(u[n,1:,0] + u[n,:-1,0])/2 + 
-                                c*dt/dy*(v[n, :, 1] - v[n, :, 0]))
+                v[n+1, :,  0] = (v[n, :,  0] - 
+                                 dt*beta*y[0 ]*(u[n, 1: , 0] + 
+                                                u[n, :-1, 0])/2 + 
+                                 c*dt/dy * (v[n, :, 1] - v[n, :, 0]))
             
             else:
-                u[n,0,:]  = 0  # west
-                v[n,:,-1] = 0  # north
-                v[n,:,0]  = 0  # south
-                u[n,-1,:] = 0  # east     
-        
-        
-    # Divergence (du/dx + dv/dy)
-    # -------------------------
-    div[:,:,:]=(u[:,1:, :] - u[:,:-1, :])/dx + (v[:,:,1:] - v[:,:,:-1])/dy
+                u[n+1,  0, :] = 0  # west
+                v[n+1,  :,-1] = 0  # north
+                v[n+1,  :, 0] = 0  # south
+                u[n+1, -1, :] = 0  # east
+       
+        # Divergence (du/dx + dv/dy)
+        # -------------------------
+        div[n, :, :] = ((u[n, 1:, :] - u[n, :-1, :])/dx +
+                        (v[n, :, 1:] - v[n, :, :-1])/dy)
     
-    # Vorticity (dv/dx - du/dy)
-    # ---------
-    vor[:,:,:] = (v[:,:,1:] - v[:,:,:-1])/dx - (u[:,1:,:] - u[:,:-1,:])/dy
+        # Vorticity (dv/dx - du/dy)
+        # -------------------------
+        uplot = (u[n, 1:, :] + u[n, :-1, :])/2
+        vplot = (v[n, :, 1:] + v[n, :, :-1])/2
         
-    return u, v, h, div, vor
-
+        # vor[n, :1, :1] = ( (vplot[:, 1:] - vplot[:, :-1])/dx -
+        #                    (uplot[1:, :] - uplot[:-1, :])/dy )
+        
+        vor[n, :, :] = np.gradient(vplot, axis=0)/dx - np.gradient(uplot, axis=1)/dy
+    
+    # Mass, energy and enstrophy conservation
+    # ---------------------------------------
+    mass   = np.zeros((Nt+1))
+    Ep     = np.zeros((Nt+1))
+    Ek     = np.zeros((Nt+1))
+    #enstro = np.zeros((Nt+1))
+    
+    for n in range(0, Nt):
+        mass[n]   = np.nansum(h[n,:,:] * dx*dy)
+        
+        Ep[n]     = g/2* np.nansum( (h[n,:,:]**2) * dx*dy)
+        Ek[n]     = H/2*(np.nansum( (u[n,:,:]**2) * dx*dy) + 
+                         np.nansum( (v[n,:,:]**2) * dx*dy))
+        
+        #enstro[n] = np.nansum(vor[n]**2)
+        
+    return u, v, h, div, vor, mass, Ep, Ek
