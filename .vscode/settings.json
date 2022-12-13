@@ -1,0 +1,24 @@
+{
+    "cSpell.words": [
+        "Arakawa",
+        "arange",
+        "cmap",
+        "colorbar",
+        "contourf",
+        "facecolor",
+        "figsize",
+        "fontsize",
+        "gridspec",
+        "hspace",
+        "linspace",
+        "matplotlib",
+        "meshgrid",
+        "ncol",
+        "pyplot",
+        "savefig",
+        "xlabel",
+        "xlim",
+        "ylabel",
+        "ylim"
+    ]
+}

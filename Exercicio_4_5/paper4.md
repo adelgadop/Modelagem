@@ -40,41 +40,73 @@ Conforme com @Doos2020, as ondas de gravidade no modelo 1D pode-se propagar ao l
 ![Modelo de água rasa 1D, extraído de @Doos2020.](fig/agua_rasa_1D.png){#fig:1}
 
 ## 1.1 Modelo de água rasa 2D 
-O modelo de água rasa 2D (e.g., nos eixos "x" e "y") presenta equações de variação zonal (@eq:1), meridional (@eq:2) e de altura (@eq:3). As equações tem como parâmetros o vento zonal ($u$), meridional ($v$), altura geopotencial ($\phi$) e a aceleração de Coriolis $f \equiv 2\Omega \,\sin \varphi$, onde $\Omega$ é a frequência angular da rotação da Terra ($\Omega=  \frac{2\pi}{86400}$ s$^{-1}$) e $\varphi$ a latitude. 
-As equações estão balanceadas com as fontes de momentum zonal ($F_u$), meridional ($F_v$) e de massa ($F_{\phi}$).
+O modelo de água rasa 2D (e.g., nos eixos "x" e "y") presenta equações de variação zonal (@eq:1), meridional (@eq:2) e de altura (@eq:3). 
+As equações tem como parâmetros o vento zonal ($u$), meridional ($v$), altura geopotencial ($\phi$) e a aceleração de Coriolis $f \equiv 2\Omega \,\sin \varphi$, onde $\Omega$ é a frequência angular da rotação da Terra ($\Omega=  \frac{2\pi}{86400}$ s$^{-1}$) e $\varphi$ a latitude. 
+As equações estão balanceadas com as forçantes zonal ($F_u$), meridional ($F_v$) e de massa ($F_{\phi}$).
 
 $$\frac{\partial u}{\partial t}+u\frac{\partial u}{\partial x} + v\frac{\partial u}{\partial y} - fv + \frac{\partial \phi}{\partial x} = F_u$${#eq:1}
 $$\frac{\partial v}{\partial t}+u\frac{\partial v}{\partial x} + v\frac{\partial v}{\partial y} - fu + \frac{\partial \phi}{\partial y} = F_v$${#eq:2}
 $$\frac{\partial \phi}{\partial t}+u\frac{\partial \phi}{\partial x} + v\frac{\partial \phi}{\partial y} +\phi.\nabla(V) = F_{\phi}$${#eq:3}
 
-Se as equações mostradas acima têm um campo básico nulo do vector horizontal $\vec{V}$, podemos obter as seguintes equações linearizadas balanceadas com as fontes de momentum:
+Se as equações mostradas acima têm um campo básico nulo do vector horizontal $\vec{V}$, podemos obter as seguintes equações linearizadas balanceadas com as forçantes:
 
 $$\frac{\partial u}{\partial t} - fv + g\frac{\partial h}{\partial x} = F_u,$${#eq:4}
 $$\frac{\partial v}{\partial t} - fu + g\frac{\partial h}{\partial y} = F_v,$${#eq:5}
 $$\frac{\partial h}{\partial t} +H \left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}\right) = F_{\phi}.$${#eq:6}
 
-Onde H é altura média da coluna de água ou de ár e $h$ a coluna de água que pode variar pela perturbação pela fonte zonal o de massa no domínio do modelo.
+Onde H é altura média da coluna de água ou de ár e $h$ a coluna de água que pode variar pela perturbação pela forçante zonal o de massa no domínio do modelo.
 O Coriolis (*f*) no plano beta equatorial está definido como $f=\beta y$, onde $\beta = \frac{2 \Omega}{a}$ ($a$ como rádio da terra equal a 6371000 m).
 As equações linearizadas podem ser discretizadas para diferentes tipos de grades chamadas de tipo Arakawa [@mesinger1976]. 
 Esta é a grade mais usada pelos modelos atmosféricos como o caso do modelo WRF-Chem. 
 Se usamos o esquema leap-frog para discretizar as equações linearizadas podemos ter as seguintes aproximações:
 
-$$\footnotesize
+$$
 \begin{aligned}
 \frac{u^{n+1}_{i,j}-u^{n-1}_{i,j}}{2\Delta t}=-g\frac{h^n_{i+1,j}-h^n_{i,j}}{\Delta x}+ \\ \frac{f}{4}(v^n_{i,j}+v^n_{i+1,j}+v^n_{i+1,j-1}+v^n_{i,j-1}),
 \end{aligned}$${#eq:7}
 
-$$\footnotesize
+$$
 \begin{aligned}
 \frac{v^{n+1}_{i,j}-v^{n-1}_{i,j}}{2\Delta t}=-g\frac{h^n_{i,j+1}-h^n_{i,j}}{\Delta y}- \\ \frac{f}{4}(u^n_{i,j}+u^n_{i,j+1}+u^n_{i-1,j+1}+u^n_{i-1,j}),\end{aligned}$${#eq:8}
 
-$$\scriptsize
+$$
 \begin{aligned}
 \frac{h^{n+1}_{i,j}-h^{n-1}_{i,j}}{2\Delta t}=-H\left(\frac{u^n_{i,j}-u^n_{i-1,j}}{\Delta x}+\frac{v^n_{i,j}- v^n_{i,j-1}}{\Delta y}\right).\end{aligned}$${#eq:9}
 
 Conforme com @Doos2020, a analise de estabilidade, assumindo que $\Delta x = \Delta y$, satisfaz o critério para todas as longitudes de onda quando 
 
 $$\mu \equiv \frac{\sqrt{gH}\Delta t}{\Delta x} \leq 0.35$$
+
+O esquema Lax-Wendrof é difusivo de segundo ordem de precisão para a solução das equações diferenciais parciais, ou também é uma expansão de Taylor truncado na segunda ordem. 
+De modo prático, na aplicação nas equações do modelo de água rasa, primeiro começamos com calcular a metade entre o $t$ e $t+\Delta t$ e depois calculamos $t+\Delta t$ usando o calculado em $t+\Delta t/2$ baseado no método Euler *half-step*,
+
+\begin{equation}
+\begin{aligned}
+y_m = y_0 + \frac{1}{2}\Delta t \cdot f(y_0) \\
+y_1 = y_0 + \Delta t \cdot f(y_m)
+\end{aligned}
+\end{equation}
+
+O esquema Lax-Wendroff pode ser aplicado ao modelo de água rasa linearizado para calcular a evolução do movimento com profundidade muito menor ao longo do tempo.
+Se consideramos as [@eq:4; @eq:5; @eq:6] para f=0 e forçantes nulas, podemos discretizar como segue em dois passos,
+
+\begin{equation}
+\begin{aligned}
+u^{n+1/2}_{i,j} &= u^n_{i,j}-\frac{g.\Delta t}{2}\left(\frac{h^n_{i,j} - h^n_{i-1,j}}{\Delta x}\right) \\
+v^{n+1/2}_{i,j} &= v^n_{i,j}-\frac{g.\Delta t}{2}\left(\frac{h^n_{i,j} - h^n_{i,j-1}}{\Delta y}\right) \\
+h^{n+1/2}_{i,j} &= h^n_{i,j}-\frac{H .\Delta t}{2}\left(\frac{u^n_{i,j} - u^n_{i-1,j}}{\Delta x} + \frac{v^n_{i,j} - v^n_{i,j-1}}{\Delta y}\right)
+\end{aligned}
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+u^{n+1}_{i,j} &=u^n_{i,j}-g.\Delta t\left(\frac{h^{n+1/2}_{i,j} - h^{n+1/2}_{i-1,j}}{\Delta x}\right) \\
+v^{n+1}_{i,j} &=v^n_{i,j}-g.\Delta t\left(\frac{h^{n+1/2}_{i,j} - h^{n+1/2}_{i,j-1}}{\Delta y}\right) \\
+h^{n+1}_{i,j} &=h^n_{i,j}-H .\Delta t\left(\frac{u^{n+1/2}_{i,j} - u^{n+1/2}_{i-1,j}}{\Delta x} + \frac{v^{n+1/2}_{i,j} - v^{n+1/2}_{i,j-1}}{\Delta y}\right)
+\end{aligned}
+\end{equation}
+
+
 
 As equações do modelo de água rasa não linearizada podem ser expressadas em termos da vorticidade potencial absoluta ($\xi \equiv (f + \partial v/\partial x - \partial u/\partial y)/h$) e $B$ é a função de Bernoulli ($B \equiv gh + 1/2(u^2+v^2)$), apresentados na forma escalar [@Doos2020],
 
@@ -87,7 +119,7 @@ As equações do modelo de água rasa não linearizada podem ser expressadas em 
 Aqui $h$ é altura total de coluna de água ou de ár, alias não temos apenas um termo $H$.
 O modelo durante a integração tem propriedades conservativas para massa, energia e enstrofia.
 Esta última propriedade está relacionada com a vorticidade e na dissipação da energia.
-A discretização das equações precisa das formulações detalhadas em @Doos2020 e resumida nas seguintes equações,
+A discretização das equações precisa das formulações detalhadas em @Doos2020, o autor propõe o modelo simples de conservação de energia definida nas seguintes equações,
 
 \begin{align}
 \frac{\partial u}{\partial t} - \overline{\xi\overline{V}^x}^y + \frac{B_{i+1,j} - B_{i, j}}{\Delta x} = 0, \\
@@ -113,6 +145,13 @@ Finalmente, nos pontos interiores dentro do domínio do modelo 2D podemos discre
 Para as condições de fronteira no caso da grade C tipo Arakawa com Nx $\times$ Ny pontos para $h$, os componentes zonal ($u$) e meridional ($v$) são usados para representar a propagação radiacional devido que eles têm pontos adicionais nas direções Oeste-Leste (Nx+1) e Sul-Norte (Ny+1), respetivamente em comparação que $h$. 
 Se consideramos *f*=0, a condição radiacional na fronteira oeste é definida como $\partial u_0/\partial t - c~\partial u_0/\partial x = 0$ e discretizada como $$u^{n+1}_{0, j} = u^{n}_{0, j} + c\frac{\Delta t}{\Delta x}(u^n_{1, j}-u^n_{0, j}).$$
 Na fronteira leste temos uma condição rígida constante conforme às condições estabelecidas pelo exercício 4, discretizado como $u^{n+1}_{Nx+1, j} = 0$. Na fronteira sul a condição radiacional é definida como $\partial v_0/\partial t - c~\partial v_0/\partial y = 0$, discretizado como $$v^{n+1}_{i, 0} = v^{n}_{i, 0} + c\frac{\Delta t}{\Delta y}(v^n_{i, 1} - v^n_{i, 0}).$$ Na fronteira norte a radiacional é $\partial v_{Ny+1}/\partial t + c~\partial v_{Ny+1}/\partial y = 0$ que pode ser discretizado como $$v^{n+1}_{i, Ny+1} = v^{n}_{i, Ny+1} - c\frac{\Delta t}{\Delta y}(v^n_{i, Ny+1} - v^n_{i, Ny}).$$
+
+<!-- An open boundary condition has two main purposes: It should permit waves to propagate out from the model domain without being reflected back. It should be possible to force the inner solution with external fields, which e.g. can be obtained from observations or models covering a larger domain.
+Open boundary conditions also need to converse mass so that the average of the sea-surface elevation (h) remains constant.
+
+The energy budget should also be treated accurately, allowing the correct energy flux through the open boundaries to balance the energy flux through the sea surface due to the wind stress.
+
+Orlanski (1975) the open boundary condition problem is also relevant to the nesting problem in which a fine mesh model is nested in a model with coarser mesh -->
 
 ## 1.3 Divergência e vorticidade
 As [@eq:div; @eq:vor] estão relacionadas com a equação de água rasa não linearizada. Neste exercício 4 e 5, os termos de divergência [@eq:div] e vorticidade [@eq:vor] foram considerados para gerar os mapas respetivos para o caso da integração da fonte constante de vento zonal oceânico.
@@ -142,6 +181,14 @@ A conservação de energia (potencial e cinética) são definidas como segue, $$
 \end{figure}
 
 # 2. Descrição da metodologia
+![](fig/Fh_test.png){width=50%}
+![](fig/Fu.png){width=50%}
+![](fig/fonte_ex5.png){width=100%}
+\begin{figure}[!h]
+\caption{Fontes de massa e zonal consideradas para a integração no modelo de água rasa. (a) Fonte de massa (Fh) como condição inicial para o teste de simetria do (Ex. 4), (b) Fonte zonal constante para o caso oceanográfico (Ex 4), (c) Fonte de massa gaussiana e elevação (Fh + H) e (d) fonte zonal constante no centro da grade (Ex. 5).}
+\label{fig:fontes}
+\end{figure}
+
 O exercício considera três condições no parâmetro de Coriolis (f=0 como cenário 'scen1', f=$f_0$ na latitude 20°S como cenário 'scen2' e f=$\beta$y para o plano beta equatorial como cenário 'scen3').
 O desenho da grade C foi feito no programa Python e gerou três tipos de matrizes que estão distribuídos espacialmente como mostra a @Fig:gradeC, usados para os experimentos dos exercícios 4 e 5.
 Esta grade é muito utilizada nos modelos numéricos atmosféricos e é chamada assim porque os pontos da grade são distribuídos espacialmente na forma da letra "C".
@@ -150,14 +197,6 @@ A opção de fonte escolhida é de tipo oceanográfico de momentum zonal constan
 Para o exercício 5 também temos assinações para as condicões iniciais (@Fig:fontes (c) e (d)).
 
 $$ Fu = \exp\left(\frac{-Xu^2}{(Nrx.\Delta x)^2}-\frac{Yu^2}{(Nry.\Delta y)^2}\right)\frac{1}{24*3600} $${#eq:Fu}
-
-![](fig/Fh_test.png){width=50%}
-![](fig/Fu.png){width=50%}
-![](fig/fonte_ex5.png){width=100%}
-\begin{figure}[!h]
-\caption{Fontes de massa e zonal consideradas para a integração no modelo de água rasa. (a) Fonte de massa (Fh) como condição inicial para o teste de simetria do (Ex. 4), (b) Fonte zonal constante para o caso oceanográfico (Ex 4), (c) Fonte de massa gaussiana e elevação (Fh + H) e (d) fonte zonal constante no centro da grade (Ex. 5).}
-\label{fig:fontes}
-\end{figure}
 
 Onde $Xu$ e $Yu$ são os pontos na direção x e y da componente zonal ($u$), $Nrx$ e $Nry$ são pontos na direção x e y para definir o alongamento da fonte zonal $Fu$.
 Ela representa escoamentos dos ventos do oeste no domínio em direção leste.
@@ -175,6 +214,7 @@ Posteriormente ao teste de simetria, a simulação do caso oceanográfico para o
 - Finalmente, foram gerados mapas de divergência e vorticidade.
 
 A programação da discretização das equações foi escrita em código de Python, disponível no GitHub "Modelagem" do autor, Exercício 4 e 5, [functions.py](https://github.com/adelgadop/Modelagem/blob/main/Exercicio_4_5/functions.py).
+A discretização é realizada nos pontos intermediários da grade C, excluindo os pontos nas bordas da grade onde as condições de fronteira foram consideradas conforme ao exercício.
 
 ## 2.1 Teste de simetria e do radiacional nas fronteiras sul, norte e oeste
 O teste de simetria considerou simular uma fonte de massa inicial definida na @eq:Fh, 

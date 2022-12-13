@@ -1,5 +1,5 @@
 """ 
-Exercicio 4
+Exercício 4
 -----------
 Shallow water 2D
 - f = 0 (scenario 1)
@@ -141,7 +141,7 @@ def animation(scen, Xh, Yh, out, H, test, f_space, f_time, pts= 6,
             print(f"Execution of animation done for {scen}.")
             
 
-def swe_leapfrog(scen, Xu, Yu, Xv, Yv, Xh, Yh, dx, dy, Nrx=10, Nry=4, H=250,
+def swe_lf_lw(scen, Xu, Yu, Xv, Yv, Xh, Yh, dx, dy, LF=True, LW=False, Nrx=10, Nry=4, H=250,
                  dt = 120, Nt=2160, lat=-20, test=True, rad=True, amp=1, pts=6, splot=True,
                  gamma=0.01, alfa=0.53, f_time=True, f_space=True, sample_interval=60):
     """Leap-frog scheme applied to shallow-water equations.
@@ -175,9 +175,13 @@ def swe_leapfrog(scen, Xu, Yu, Xv, Yv, Xh, Yh, dx, dy, Nrx=10, Nry=4, H=250,
     
     if scen == 'scen1':
         f = 0
+        fu = f*Yu
+        fv = f*Yv
         
     elif scen == 'scen2':
         f = 2*q*np.sin(np.deg2rad(lat))
+        fu = np.ones(Yu.shape)*f
+        fv = np.ones(Yv.shape)*f
         
     elif scen == 'scen3':
         beta = 2*q*np.cos(np.deg2rad(0))/a
@@ -188,8 +192,10 @@ def swe_leapfrog(scen, Xu, Yu, Xv, Yv, Xh, Yh, dx, dy, Nrx=10, Nry=4, H=250,
     """ time definitions
     <var>nm1  (n-1)
     <var>n    ( n )
+    <var>nm   ( )
     <var>np1  (n+1) 
     """
+    unm, vnm, hnm = np.zeros(Xu.shape), np.zeros(Xv.shape), np.zeros(Xh.shape)
     un, vn, hn = np.zeros(Xu.shape), np.zeros(Xv.shape), np.zeros(Xh.shape)
     unp1, vnp1, hnp1 = un.copy(), vn.copy(), hn.copy()
     
@@ -537,7 +543,7 @@ def plot_swe(cenarios, data, Xh, Yh, Xu, Yu, H, nidx, test,
         # Divergencia
         # -----------
         for ax, scen in zip([axes[0,0], axes[1,0], axes[2,0]], cenarios):
-            im = ax.contourf(Xh/1000,Yh/1000, data[scen]['div'][n], levels=lvs1, cmap=plt.cm.RdBu_r,  extend='both') #,
+            im = ax.contourf(Xh/1000,Yh/1000, data[scen]['div'][nidx], levels=lvs1, cmap=plt.cm.RdBu_r,  extend='both') #,
             #cbar = fig.colorbar(im, ax=ax, orientation="vertical")
             # u, v = data[scen]['u'], data[scen]['v']
             # staged_u[:, :, :] = (u[:, 1:, :] + u[:, :-1, :]) * 0.5
@@ -580,11 +586,216 @@ def plot_swe(cenarios, data, Xh, Yh, Xu, Yu, H, nidx, test,
         pass
         
     
+def lf_swe(scen, amp=1, H=10, days=100, dt=60, tstep=24):
+    """ Shallow water equations not linearized, a simple energy-conserving model
+        using the Leapfrog scheme
+        
+    Args:    
+        amp:    1 (Fu activated), 0 (Fu = 0)
+        H:      Height for initial conditions
+        days:   integration period
+        dt:     temporal resolution [s]
+        tsetp:  time step [hours]
+    """
 
+    dx = 100*1e3   # m
+    dy = 100*1e3   # m
+
+    #Grade C
+    x2 = np.arange(-4000*1e3, 4000*1e3 + dx, dx)
+    y2 = np.arange(-4000*1e3, 4000*1e3 + dy, dy)
+    x = (x2[1:] + x2[:-1])/2
+    y = (y2[1:] + y2[ :-1])/2
+
+    Xu, Yu = np.meshgrid(x2, y)
+    Xv, Yv = np.meshgrid(x, y2)
+    Xh, Yh = np.meshgrid(x,  y)
+    Xz, Yz = np.meshgrid(x2,y2)
+    
+    # Define constants
+    # ------------------------------------------
+
+    Tf = days*24*3600                         # final time
+    t = np.arange(0, Tf, dt)
+    q = 2*np.pi/86400                         # angular velocity (2pi/(24*3600 s)) [1/s]
+    a = 6371000                               # Earth radius [m]
+    g = 9.8                                   # m/s^2 (gravity acceleration)
+    c = np.sqrt(g*H)                          # Phase velocity [m/s]
+    if scen == 'scen1':
+        f = 0
+        fu = f*Yu
+        fv = f*Yv
+    elif scen == 'scen2':
+        f = 2*q*np.sin(np.deg2rad(-20))
+        fu = np.ones(Yu.shape)*f
+        fv = np.ones(Yv.shape)*f
+    else:
+        beta = 2*q*np.cos(np.deg2rad(0))/a        # Plano Beta equatorial     
+        fu = beta*Yu
+        fv = beta*Yv
+
+    # We define initial conditions and variables
+    """ time definitions
+    <var>nm1  (n-1)
+    <var>n    ( n )
+    <var>np1  (n+1) 
+    """
+
+    # time (n-1)
+    unm1, vnm1, hnm1  = np.zeros(Xu.shape), np.zeros(Xv.shape), np.zeros(Xh.shape)
+    # time ( n )
+    un  , vn  , hn    = np.zeros(Xu.shape), np.zeros(Xv.shape), np.zeros(Xh.shape)
+    # time (n+1)
+    unp1, vnp1, hnp1  = np.zeros(Xu.shape), np.zeros(Xv.shape), np.zeros(Xh.shape)
+
+    # Source conditional for zonal wind and height
+    # ------------------------------------------------------------------------------
+    alfa = 0.02
+    Fu = amp*np.exp(-(Yu-0*dy)**2/(4*dy)**2)*np.exp(-(Xu-15*dx)**2/(10*dx)**2)/(24*3600)
+    Fh = 10*np.exp(-Xh**2/(4*dx)**2 - Yh**2/(10*dy)**2)
+
+    dec = (alfa**6) * t[::-1]/(3600*24)**2 * np.exp(-alfa*(t/(3600*24)))
+    dec = dec/np.nanmax(dec)
+    un   += Fu*dec[0]
+    hn   += H + Fh
+    hnm1 += H + Fh
+    hnp1 += H + Fh
+
+    # Sampling variables each sample_interval
+    # ---------------------------------------
+    h_lst = list()                                     # h sampling
+    u_lst = list(); v_lst = list()                     # u, v sampling
+    div_lst = list(); vor_lst = list()                 # divergence and vorticity
+    t_lst  = [0]
+    sample_interval = 60*tstep                         # Time to save information [min]
+    h_lst.append(hn)
+    u_lst.append(un)
+    v_lst.append(vn)
+
+    U, V = un.copy(), vn.copy()
+    mass   = np.array([])                              # mass conservation
+    en_k   = np.array([])                              # kinetic energy
+    en_p   = np.array([])                              # potential energy
+    enst   = np.array([])                              # enstrophy energy
+
+    time_step = 0
+
+    for n in range(1, t.shape[0]):
+        """Shallow water equations linearized
+        U: Mass flux U
+        V: Mass flux V
+        B: Bernoulli defined at the locations where h is defined
+        Zeta: absolute potential vorticity is redefined to the corners of th C-grid
+        """
+        # Mass fluxes U and V at inside points related to h
+        # -------------------------------------------------
+        # Mass flux in U
+        U = un.copy()*np.nan
+        U[:,1:-1] = un[:,1:-1] * 1/2*(hn[:, :-1] + hn[:, 1:])
+        U[:,   0] = un[: ,0] * hn[:,0]
+        U[:,  -1] = un[:,-1] * hn[:,-1]
+
+        # Mass flux in V
+        V = vn.copy()*np.nan
+        V[1:-1, :] = vn[1:-1, :] * 1/2*(hn[:-1, :]+hn[1:, :])
+        V[0   , :] = vn[  0, :] * hn[0 , :]
+        V[-1  , :] = vn[ -1, :] * hn[-1, :]
+
+        # Bernoulli (ok)
+        # ----------------------------------------------------------------------------------------
+        B = (g*hn + 1/2 * (1/2*(un[: , 1:]**2 + un[:, :-1]**2) +
+                           1/2*(vn[1:,  :]**2 + vn[:-1, :]**2)))
+
+        # ZETA - absolute potential vorticity related with fv
+        # ----------------------------------------------------------------------------------------
+        ZETA = np.ones((Xz.shape[0], Yz.shape[1]))*np.nan
+        
+        # Inside points -> E = (f + dv/dx - du/dy)/h
+        ZETA[1:-1, 1:-1] = ((fv[1:-1, :-1] + (vn[1:-1, 1:] - vn[1:-1, :-1])/dx - (un[1:, 1:-1] - un[:-1, 1:-1])/dy) / 
+                            ((hn[:-1, :-1] + hn[:-1, 1:] + hn[1:, :-1] + hn[1:, 1:])/4))
+        
+        # South - North [0, -1] in v (Y axis)
+        ZETA[ 0, 1:-1] = (fv[ 0, :-1] + (vn[ 0, 1:] - vn[0 , :-1])/dx) / ((hn[ 0, :-1] + hn[ 0, 1:])/2) 
+        ZETA[-1, 1:-1] = (fv[-1, :-1] + (vn[-1, 1:] - vn[-1, :-1])/dx) / ((hn[-1, :-1] + hn[-1, 1:])/2)
+        
+        # East - West [0, -1] in u (X axis)
+        ZETA[1:-1, 0] = (fv[1:-1, 0] - (un[1:, 0] - un[:-1 , 0])/dy) / ((hn[:-1, 0] + hn[1:, 0])/2) 
+        ZETA[1:-1,-1] = (fv[1:-1,-1] - (un[1:,-1] - un[:-1 ,-1])/dy) / ((hn[:-1,-1] + hn[1:,-1])/2) 
+
+        # Iterations as leap-frog scheme
+        # -----------------------------------------------------------------------------------------
+        unp1[:   , 1:-1] = (unm1[:,1:-1] + 2*dt*(1/2*(ZETA[1: , 1:-1]* 1/2 *(V[1: , :-1] + V[1: , 1:]) +
+                                                      ZETA[:-1, 1:-1]* 1/2 *(V[:-1, :-1] + V[:-1, 1:])) - 
+                                                 (B[:, 1:] -B[:, :-1])/dx + Fu[:, 1:-1] * dec[n]))
+        
+        vnp1[1:-1,:    ] = (vnm1[1:-1,:] - 2*dt*(1/2*(ZETA[1:-1,  1:]* 1/2 *(U[:-1,  1:] + U[1:, 1:]) +
+                                                      ZETA[1:-1, :-1]* 1/2 *(U[:-1, :-1] + U[1:,:-1])) + 
+                                                 (B[1:, :] - B[:-1, :])/dy))
+        
+        hnp1[:, :]       = (hnm1[:,:] + 2*dt*(-(U[:, 1:] - U[:, :-1])/dx - (V[1:, :] - V[:-1, :])/dy))
+        
+        # Boundary conditions (radiational and rigid at east)
+        # ------------------------------------------------------------------------------------------
+        # East -> du/dt - fv + c*du/dx = 0
+        unp1[:,-1] = 0
+        
+        # West -> du/dt - fv - c*du/dx = 0    (radiational)
+        unp1[: , 0] = un[: , 0] + dt*((vn*fv)[1: , 0] + (vn*fv)[:-1, 0])/2 + c*dt/dx * (un[:, 1] - un[:, 0])
+
+        # South -> dv/dt + fu - c*dv/dy = 0   (radiational)
+        vnp1[0 , :] = vn[0 , :] - dt*((un*fu)[0,  1:] + (un*fu)[0, :-1])/2 + c*dt/dx * (vn[1, :] - vn[0, :])
+
+        # North -> dv/dt + fu + c*dv/dy = 0   (radiational)
+        vnp1[-1, :] = vn[-1, :] - dt*((un*fu)[0,  1:] + (un*fu)[0, :-1])/2 - c*dt/dx * (vn[-1,:] - vn[-2, :])
+
+        # Loop
+        # ----------------------------------------------------------------------
+        # n   -> n-1
+        unm1 = un.copy()
+        vnm1 = vn.copy()
+        hnm1 = hn.copy()
+        
+        # n+1 -> n
+        un = unp1.copy()
+        vn = vnp1.copy()
+        hn = hnp1.copy()
+
+        # Divergence and vorticity
+        # ----------------------------------------------------------------------    
+        uplot = (un[: ,1:] + un[:  , :-1])/2
+        vplot = (vn[1:, :] + vn[:-1,   :])/2
+        
+        div = (un[:,1:] - un[:, :-1])/dx + (vn[1:, :] - vn[:-1, :])/dy
+        vor = np.gradient(vplot, axis=1)/dx - np.gradient(uplot, axis=0)/dy
+
+        # Mass & energy conservation
+        # ----------------------------------------------------------------------
+        mass = np.concatenate((mass, [np.nansum(hn * dx*dy)]))
+        en_p = np.concatenate((en_p, [g/2 * np.nansum((hn**2) * dx*dy)]))
+        en_k = np.concatenate((en_k, [H/2 *(np.nansum((un**2) * dx*dy) + 
+                                            np.nansum((vn**2) * dx*dy))]))
+        
+        enst = np.concatenate((enst, [np.nansum(vor**2)]))
+            
+        time_step += 1
+        
+        if (time_step % sample_interval == 0):
+            print("Time: \t{:.2f} hours".format(time_step*dt/3600))
+            print("Sample interval (days): \t{} / {:.0f}".format(time_step/sample_interval+1, Tf/(24*60*dt)))
+            print("Mass: \t{:.2f}\n".format(np.sum(hn)))
+            h_lst.append(hn)
+            u_lst.append(un)
+            v_lst.append(vn)
+            div_lst.append(div)
+            vor_lst.append(vor)
+            t_lst.append(time_step*dt)        # seconds
+    
+    param = {'dx':dx,'dy':dy,'Xh':Xh,'Yh':Yh, 'Xu':Xu, 'Yu':Yu, 'Xv':Xv, 'Yv':Yv, 'Xz':Xz, 'Yz':Yz, 'H':H, 'Fh':Fh, 'Fu':Fu}
+    
+    return {'t':t_lst, 'h': h_lst, 'u':u_lst, 'v': v_lst, 'div':div_lst, 'vor':vor_lst, 'm':mass, 'ep':en_p, 'ek':en_k, 'ens': enst}, param
             
     
-    
-        
+
         
     
     
